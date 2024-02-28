@@ -2,8 +2,6 @@ from pathlib import Path
 from enum import Enum
 
 
-
-
 class ResourceType(Enum):
     WhiteLotus=1
     Water=2
@@ -40,5 +38,5 @@ class ResourceCard(object):
             if count == 0:
                 continue
             resrouceStrings.append(f"{resource}: {count}")
-        return f"Splendid.ResourceCard(level: {self.level}, produces: {self.produces}, VP: {self.victoryPoints}, requires:[{', '.join(resrouceStrings)}, imagePath: {self.imagePath}]"
+        return f"Splendid.ResourceCard(level: {self.level}, produces: {self.produces}, VP: {self.victoryPoints}, requires:[{', '.join(resrouceStrings)}], imagePath: {self.imagePath}"
         

@@ -1,4 +1,5 @@
 import csv
+import traceback
 
 from splendid import ResourceType, ResourceCard
 
@@ -11,10 +12,23 @@ conversionColorToResourceType = {
     'Gold':ResourceType.Avatar
 }
 
+
+class BadResourceCSVRow(ValueError):
+    def __init__(self, csvRowNumber, rowContents, error):            
+        # Call the base class constructor with the parameters it needs
+        super().__init__(f"Bad CSV Row. Row no.{csvRowNumber}, {error}: row contents {rowContents}")
+            
+        # Now for your custom code...
+        self.rowNumber = csvRowNumber
+        self.previousError = error
+        self.rowContents = rowContents
+
+
 def loadResourceCardsFromCsv(csvFile):
     with open(csvFile, newline='\n') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', quotechar="'")
         cards = list()
+        errors = list()
         rowCount = 1
         for row in reader:
             try:
@@ -29,19 +43,23 @@ def loadResourceCardsFromCsv(csvFile):
                     requirements[resourceType] = 0 if row[ogColor] == '' else int(row[ogColor])
                 cards.append(ResourceCard(produces=generates, requires=requirements,level=cardLevel,victoryPoints=victoryPoints))
             except (KeyError,ValueError) as e:
-                raise ValueError(f"invalid row at {rowCount}\RowContents: {row}")
+                customError = BadResourceCSVRow(rowCount, f"{row}", e)
+                errors.append(customError)
 
             rowCount+=1
 
-        return cards
+        return cards, errors
 
 
 def main():
     resourceCardsCSV = "assets/resourceCards.csv"
     print(f"{resourceCardsCSV}")
-    cards = loadResourceCardsFromCsv(resourceCardsCSV)
+    cards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
     print(f"number of cards {len(cards)}")
     print(f"card 0 {cards[0]}")
+    print(f"number of bad rows {len(errors)}")
+    if len(errors) > 0:
+        print(f"{errors[0]}")
 
 
 if __name__ == "__main__":
