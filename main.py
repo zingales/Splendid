@@ -1,5 +1,10 @@
 import csv
-import traceback
+from pathlib import Path
+from collections import defaultdict
+
+import imageDrawing
+import tempfile
+
 
 from splendid import ResourceType, ResourceCard
 
@@ -24,7 +29,7 @@ class BadResourceCSVRow(ValueError):
         self.rowContents = rowContents
 
 
-def loadResourceCardsFromCsv(csvFile):
+def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exception]]:
     with open(csvFile, newline='\n') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', quotechar="'")
         cards = list()
@@ -51,6 +56,43 @@ def loadResourceCardsFromCsv(csvFile):
         return cards, errors
 
 
+    
+
+
+
+
+
+
+
+def loadAllResourceImagePaths(assetFolder:Path):
+    ResourceCardFolderName = "Resource Cards Images"    
+    AirFolder = "Air Tribe"
+    EarthFolder = "Earth Kingdom"
+    FireFolder = "Fire Nation"
+    WaterFolder = "Water Tribe"
+    WhiteLotusFolder = "White Lotus"
+
+    folderNameToResourceType = {
+        AirFolder:ResourceType.Air,
+        EarthFolder:ResourceType.Earth,
+        FireFolder:ResourceType.Fire,
+        WaterFolder:ResourceType.Water,
+        WhiteLotusFolder:ResourceType.WhiteLotus
+    }
+
+    toReturn = defaultdict(list)
+
+    for folderName, resourceType in folderNameToResourceType.items():
+        path = assetFolder / ResourceCardFolderName / folderName
+
+        images = Path(path).glob("*.png")
+        toReturn[resourceType] = [str(p) for p in images]
+
+
+    return toReturn
+
+
+
 def main():
     resourceCardsCSV = "assets/resourceCards.csv"
     print(f"{resourceCardsCSV}")
@@ -59,8 +101,41 @@ def main():
     print(f"card 0 {cards[0]}")
     print(f"number of bad rows {len(errors)}")
     if len(errors) > 0:
-        print(f"{errors[0]}")
+        print(f"{errors}")
 
+
+    # outputFolder = tempfile.TemporaryDirectory(dir="/Users/gzingales/Downloads/SplendidOutput")
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v1")
+    
+    resourceTypeToImageList = loadAllResourceImagePaths(Path("assets"))
+
+    # assign an image for each card
+
+    cardsOfTypeProduced = {
+        ResourceType.Air: 0,
+        ResourceType.Water:0, 
+        ResourceType.Earth:0,
+        ResourceType.Fire:0,
+        ResourceType.WhiteLotus:0
+    }
+    for card in cards:
+        
+        try:
+            if card.imagePath is None:
+                card.imagePath = resourceTypeToImageList[card.produces].pop()
+
+            outputPath = outputFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
+            imageDrawing.processResourceCard(card, outputPath)
+
+            cardsOfTypeProduced[card.produces]+=1
+        except IndexError as e:
+            print(e)
+
+
+    print(f"Resource Cards Generated")
+    for resourceType, totalCount in cardsOfTypeProduced.items():
+        print(f"{resourceType.name}: {totalCount}")
+        
 
 if __name__ == "__main__":
     main()
