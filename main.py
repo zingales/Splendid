@@ -94,20 +94,38 @@ def loadAllResourceImagePaths(assetFolder:Path):
 
 
 def main():
-    resourceCardsCSV = "assets/resourceCards.csv"
-    print(f"{resourceCardsCSV}")
+    # outputFolder = tempfile.TemporaryDirectory(dir="/Users/gzingales/Downloads/SplendidOutput")
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v1")
+    assetsPath = Path("assets")
+
+
+    #Load resource type images
+
+    sharedImages = imageDrawing.SplendidSharedAssetts()
+
+    sharedImages.saveLevelIcon(assetsPath/ "level_icon.png")
+
+    resourceTypeToImage = {
+        ResourceType.Air: assetsPath/ "Resource Type Images" / "Air.png",
+        ResourceType.Water:assetsPath/ "Resource Type Images" / "Water.png",
+        ResourceType.Earth:assetsPath/ "Resource Type Images" / "Earth.png",
+        ResourceType.Fire:assetsPath/ "Resource Type Images" / "Fire.png",
+        ResourceType.WhiteLotus:assetsPath/ "Resource Type Images" / "WhiteLotus.png",
+    }
+
+    for resourceType, image in resourceTypeToImage.items():
+        sharedImages.saveResourceTypeImage(resourceType, image)
+
+
+    # Load Resource Cards
+    resourceCardsCSV = assetsPath / "resourceCards.csv"
     cards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
     print(f"number of cards {len(cards)}")
-    print(f"card 0 {cards[0]}")
     print(f"number of bad rows {len(errors)}")
     if len(errors) > 0:
         print(f"{errors}")
-
-
-    # outputFolder = tempfile.TemporaryDirectory(dir="/Users/gzingales/Downloads/SplendidOutput")
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v1")
     
-    resourceTypeToImageList = loadAllResourceImagePaths(Path("assets"))
+    resourceTypeToImageList = loadAllResourceImagePaths(assetsPath)
 
     # assign an image for each card
 
@@ -125,7 +143,7 @@ def main():
                 card.imagePath = resourceTypeToImageList[card.produces].pop()
 
             outputPath = outputFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
-            imageDrawing.processResourceCard(card, outputPath)
+            imageDrawing.processResourceCard(card, outputPath, sharedImages)
 
             cardsOfTypeProduced[card.produces]+=1
         except IndexError as e:
