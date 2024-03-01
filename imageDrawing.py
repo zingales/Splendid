@@ -6,12 +6,18 @@ from pathlib import Path
 
 PLAYING_CARD_SIZE_IN = (2.5, 3.7)
 
+VIP_CARD_SIZE_IN = (2.5, 2.5)
+
+RESOURCE_CARD_SIZE_IN = (4.5, 2.5)
+
 OUTPUT_DPI = 150
 
 BORDER_SIZE = 10
 
+TOKEN_DIAMETER_IN = 1.5
 
-# Delicate background 
+
+# Delicate colors background 
 # resourceTypeToPILColor = {
 #     ResourceType.Air: (249,239,210), 
 #     ResourceType.Earth: (225,252,223), 
@@ -90,13 +96,14 @@ def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image):
 
 def processToken(token:ResourceToken, output_path:Path):
     img = Image.open(token.imagePath)
-    tokenImg = img.resize(size=(450,450))
+    pixels = int(TOKEN_DIAMETER_IN*OUTPUT_DPI)
+    tokenImg = img.resize(size=(pixels,pixels))
     tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
 
 def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidSharedAssetts):
     img = Image.open(vipCard.imagePath)
-    card_size = PLAYING_CARD_SIZE_IN
+    card_size = VIP_CARD_SIZE_IN
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = "Black"
     new_image = shrink_image(img, output_size, border_color)
@@ -152,9 +159,8 @@ def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidShare
 def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
     img = Image.open(resourceCard.imagePath)
 
-
     # create background image
-    card_size = reversed(PLAYING_CARD_SIZE_IN)
+    card_size = RESOURCE_CARD_SIZE_IN
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = resourceTypeToPILColor[resourceCard.produces]
     new_image = shrink_image(img, output_size, border_color)
@@ -222,7 +228,7 @@ def add_border(img, border_color):
     smaller_image = img.crop(box=(BORDER_SIZE,BORDER_SIZE,x-BORDER_SIZE,y-BORDER_SIZE))
     return ImageOps.expand(smaller_image,  BORDER_SIZE, fill = border_color)
 
-def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill:str):
+def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
     desired_x, desired_y = new_size_pixels
 
     img_size_y, img_size_x = img.size

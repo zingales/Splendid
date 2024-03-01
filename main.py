@@ -119,7 +119,7 @@ def loadAllResourceImagePaths(assetFolder:Path):
 
 
 def main():
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v2")
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v3")
     assetsPath = Path("assets")
 
 
@@ -154,8 +154,8 @@ def main():
         imageDrawing.processToken(token, tokenPath)
         tokenCounts[token.resourceType]+=1
 
-    # resourceCardsCSV = assetsPath / "resourceCards.csv"
-    resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
+    resourceCardsCSV = assetsPath / "resourceCards.csv"
+    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
     resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
     print(f"number of cards {len(resourceCards)}")
     print(f"number of bad rows {len(errors)}")
