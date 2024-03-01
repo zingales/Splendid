@@ -213,8 +213,6 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
         if resourceCount == 0:
             continue
 
-        # x = xOffsetMultiple*(index+0.5)+startingXOffset
-        # y = yOffset + (img_h//2)
         x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
         y = yOffset 
         addNumber(draw, resourceCount, (x,y), font)

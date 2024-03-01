@@ -20,7 +20,6 @@ conversionColorToResourceType = {
 
 class BadCSVRow(ValueError):
     def __init__(self, csvRowNumber, rowContents, error):            
-        # Call the base class constructor with the parameters it needs
         super().__init__(f"Bad CSV Row. Row no.{csvRowNumber}, {error}: row contents {rowContents}")
 
         self.rowNumber = csvRowNumber
@@ -79,13 +78,6 @@ def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exceptio
             rowCount+=1
 
         return cards, errors
-
-
-    
-
-
-
-
 
 
 
