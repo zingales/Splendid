@@ -111,6 +111,7 @@ def generateVIPCardBack(outputFolder:Path, imagePath:Path):
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = "Black"
     cardImage = shrink_image(img, output_size, border_color)
+    cardImage = cardImage.transpose(Image.ROTATE_180)
     output_path = outputFolder / "VIPCardBack.png"
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
     return output_path
@@ -177,6 +178,7 @@ def generateResourceCardBacks(outputFolder:Path, imagePath:Path, iconImg:Image):
     border_color = "white"
     cardImage = Image.open(imagePath)
     cardImage = shrink_image(cardImage, output_size, border_color)
+    cardImage = add_border(cardImage, "black", 1)
 
     bg_w, bg_h = cardImage.size
 
@@ -186,7 +188,7 @@ def generateResourceCardBacks(outputFolder:Path, imagePath:Path, iconImg:Image):
         backImg = cardImage.copy()
         addCardLevel(backImg, i, (20,bg_h//2), iconImg, alignmentHorizontal=False)
         addCardLevel(backImg, i, (bg_w-20-iconImg.size[0],bg_h//2), iconImg, alignmentHorizontal=False)
-
+        backImg = backImg.transpose(Image.ROTATE_180)
         output_path = outputFolder / f"ResourceCard_Back_{i}.png"
         generatedBackPaths.append(output_path)
         backImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
@@ -203,6 +205,7 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     border_color = resourceTypeToPILColor[resourceCard.produces]
     new_image = shrink_image(img, output_size, border_color)
     cardImage = add_border(new_image, border_color)
+    cardImage = add_border(cardImage, "black", 1)
 
     # Add produces in the corner
     producesImage = sharedImages.getProducesImage(resourceCard.produces)
@@ -258,11 +261,11 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
 
-def add_border(img, border_color):
+def add_border(img, border_color, border_size=BORDER_SIZE):
     x,y = img.size
     
-    smaller_image = img.crop(box=(BORDER_SIZE,BORDER_SIZE,x-BORDER_SIZE,y-BORDER_SIZE))
-    return ImageOps.expand(smaller_image,  BORDER_SIZE, fill = border_color)
+    smaller_image = img.crop(box=(border_size,border_size,x-border_size,y-border_size))
+    return ImageOps.expand(smaller_image,  border_size, fill = border_color)
 
 def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
     desired_x, desired_y = new_size_pixels

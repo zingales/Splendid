@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import imageDrawing
-import tempfile
+from PDFMaker import PdfSize, US_LETTER_IN
 
 
 from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken
@@ -135,22 +135,40 @@ def main():
         ResourceType.WhiteLotus:assetsPath/ "Resource Type Images" / "WhiteLotus.png",
     }
 
+    pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
+
+    
     resourceTokens = list()
     for resourceType, image in resourceTypeToImage.items():
         sharedImages.loadResourceTypeImage(resourceType, image)
         resourceTokens.append(ResourceToken(resourceType, image))
 
+    avatarTokens = list()
     avatarPaths = assetsPath / "Avatar Coins"
     imagePaths = Path(avatarPaths).glob("*.png")
     for imagePath in imagePaths:
-        resourceTokens.append(ResourceToken(ResourceType.Avatar, imagePath))
+        avatarTokens.append(ResourceToken(ResourceType.Avatar, imagePath))
 
 
+    allDistinctTokens = list()
+    allDistinctTokens.extend(avatarTokens)
+    allDistinctTokens.extend(resourceTokens)
     tokenCounts = defaultdict(int)
-    for token in resourceTokens:
+    for token in allDistinctTokens:
         tokenPath = outputImageFolderPath / f"token_{token.resourceType.name}_{tokenCounts[token.resourceType]}.png"
         imageDrawing.processToken(token, tokenPath)
+        token.renderedFrontImage = tokenPath
         tokenCounts[token.resourceType]+=1
+
+    
+    imageTuples = [(token.renderedFrontImage, None) for token in avatarTokens]
+
+    for token in resourceTokens:
+        for _ in range(7):
+            # Each resource token has 7 identical multiples
+            imageTuples.append((token.renderedFrontImage, None))
+
+    pdfManager.makePDF(imageTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
 
 
     resourceCardBackPath = assetsPath/ "ResourceCardBack.png"
@@ -184,6 +202,8 @@ def main():
 
             outputPath = outputImageFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
             imageDrawing.processResourceCard(card, outputPath, sharedImages)
+            card.renderedFrontImage = outputPath
+            card.renderedBackImage = resourceCardBackPaths[card.level-1]
 
             cardsOfTypeProduced[card.produces]+=1
         except IndexError as e:
@@ -194,11 +214,14 @@ def main():
     for resourceType, totalCount in cardsOfTypeProduced.items():
         print(f"{resourceType.name}: {totalCount}")
 
+    imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in resourceCards]
+
+    pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
 
     # Load VIP cards
         
-    vipcardBackImagePath = assetsPath / "VIPCardBack.png"
-    imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePath)
+    vipcardBackImagePathRaw = assetsPath / "VIPCardBack.png"
+    vipcardBackImagePath = imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePathRaw)
     print(f"VIP card back produced")
         
     vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCards.csv")
@@ -218,10 +241,17 @@ def main():
         
         outputPath = outputImageFolderPath / f"VIP_{vipCardsProduced}.png"
         imageDrawing.processVIPCard(card, outputPath, sharedImages)
+        card.renderedFrontImage = outputPath
+        card.renderedBackImage = vipcardBackImagePath
         vipCardsProduced+=1
 
 
     print(f"VIP cards produced: {vipCardsProduced}")
+
+    imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in vipCards]
+
+    pdfManager.makePDF(imageTuples, outputFolderPath/"VIPCards.pdf" ,imageDrawing.VIP_CARD_SIZE_IN)
+
 
 
 
