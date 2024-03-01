@@ -126,6 +126,7 @@ def main():
 
     sharedImages.loadLevelIcon(assetsPath/ "level_icon.png")
 
+
     resourceTypeToImage = {
         ResourceType.Air: assetsPath/ "Resource Type Images" / "Air.png",
         ResourceType.Water:assetsPath/ "Resource Type Images" / "Water.png",
@@ -151,8 +152,13 @@ def main():
         imageDrawing.processToken(token, tokenPath)
         tokenCounts[token.resourceType]+=1
 
-    resourceCardsCSV = assetsPath / "resourceCards.csv"
-    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
+
+    resourceCardBackPath = assetsPath/ "ResourceCardBack.png"
+    resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
+    print(f"Resource Cards Backs Generated")
+
+    # resourceCardsCSV = assetsPath / "resourceCards.csv"
+    resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
     resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
     print(f"number of cards {len(resourceCards)}")
     print(f"number of bad rows {len(errors)}")

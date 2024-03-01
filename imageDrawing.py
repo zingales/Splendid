@@ -84,13 +84,18 @@ def addNumber(draw:ImageDraw, number:int, centeredAt:tuple[int,int], font):
     draw.text(loc,text,fill='white', font=font, stroke_width=2, stroke_fill='black')
 
 
-def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image):
+def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image, alignmentHorizontal=True):
     centerX, centerY = centeredAt
     x, y = icon.size
 
-    startX = centerX - (number*x)//2 
-    for i in range(number):
-        image.paste(icon, (startX+(x*i),centerY),mask=icon)
+    if alignmentHorizontal:
+        startX = centerX - (number*x)//2 
+        for i in range(number):
+            image.paste(icon, (startX+(x*i),centerY),mask=icon)
+    else:
+        startY = centerY - (number*y)//2 
+        for i in range(number):
+            image.paste(icon, (centerX,startY+ (y*i)),mask=icon)
 
 
 
@@ -155,6 +160,29 @@ def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidShare
 
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
+
+def generateResourceCardBacks(outputFolder:Path, imagePath:Path, iconImg:Image):
+    output_size = tuple(x*OUTPUT_DPI for x in RESOURCE_CARD_SIZE_IN)
+
+    border_color = "white"
+    cardImage = Image.open(imagePath)
+    cardImage = shrink_image(cardImage, output_size, border_color)
+
+    bg_w, bg_h = cardImage.size
+
+    generatedBackPaths = list()
+
+    for i in range(1,4):
+        backImg = cardImage.copy()
+        addCardLevel(backImg, i, (20,bg_h//2), iconImg, alignmentHorizontal=False)
+        addCardLevel(backImg, i, (bg_w-20-iconImg.size[0],bg_h//2), iconImg, alignmentHorizontal=False)
+
+        output_path = outputFolder / f"ResourceCard_Back_{i}.png"
+        generatedBackPaths.append(output_path)
+        backImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+
+    return generatedBackPaths
+    
 
 def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
     img = Image.open(resourceCard.imagePath)
