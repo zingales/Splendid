@@ -108,18 +108,23 @@ def loadAllResourceImagePaths(assetFolder:Path):
 
     return toReturn
 
-
+def guaranteeFolder(path:Path):
+    path.mkdir(parents=True, exist_ok=True)
 
 def main():
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v3")
+
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v4")
+    outputImageFolderPath = outputFolderPath / "images"
     assetsPath = Path("assets")
 
+
+    guaranteeFolder(outputImageFolderPath)
 
     #Load resource type images
 
     sharedImages = imageDrawing.SplendidSharedAssetts()
 
-    sharedImages.saveLevelIcon(assetsPath/ "level_icon.png")
+    sharedImages.loadLevelIcon(assetsPath/ "level_icon.png")
 
     resourceTypeToImage = {
         ResourceType.Air: assetsPath/ "Resource Type Images" / "Air.png",
@@ -131,7 +136,7 @@ def main():
 
     resourceTokens = list()
     for resourceType, image in resourceTypeToImage.items():
-        sharedImages.saveResourceTypeImage(resourceType, image)
+        sharedImages.loadResourceTypeImage(resourceType, image)
         resourceTokens.append(ResourceToken(resourceType, image))
 
     avatarPaths = assetsPath / "Avatar Coins"
@@ -142,7 +147,7 @@ def main():
 
     tokenCounts = defaultdict(int)
     for token in resourceTokens:
-        tokenPath = outputFolderPath / f"token_{token.resourceType.name}_{tokenCounts[token.resourceType]}.png"
+        tokenPath = outputImageFolderPath / f"token_{token.resourceType.name}_{tokenCounts[token.resourceType]}.png"
         imageDrawing.processToken(token, tokenPath)
         tokenCounts[token.resourceType]+=1
 
@@ -171,7 +176,7 @@ def main():
             if card.imagePath is None:
                 card.imagePath = resourceTypeToImageList[card.produces].pop()
 
-            outputPath = outputFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
+            outputPath = outputImageFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
             imageDrawing.processResourceCard(card, outputPath, sharedImages)
 
             cardsOfTypeProduced[card.produces]+=1
@@ -201,7 +206,7 @@ def main():
         if card.imagePath is None:
             card.imagePath = vipImagesPaths.pop()
         
-        outputPath = outputFolderPath / f"VIP_{vipCardsProduced}.png"
+        outputPath = outputImageFolderPath / f"VIP_{vipCardsProduced}.png"
         imageDrawing.processVIPCard(card, outputPath, sharedImages)
         vipCardsProduced+=1
 

@@ -49,7 +49,7 @@ class SplendidSharedAssetts(object):
         self.resouceTypeToImage = dict()
         self.levelIcon = None
 
-    def saveResourceTypeImage(self, resourceType:ResourceType, imagePath:Path):
+    def loadResourceTypeImage(self, resourceType:ResourceType, imagePath:Path):
         img = Image.open(imagePath)
         image_produces = img.resize(size=self.producesSize)
         image_requires = img.resize(size=self.requiresSize)
@@ -61,7 +61,7 @@ class SplendidSharedAssetts(object):
     def getRequiresImage(self, resourceType:ResourceType):
         return self.resouceTypeToImage[resourceType][1]
     
-    def saveLevelIcon(self, imagePath):
+    def loadLevelIcon(self, imagePath):
         img = Image.open(imagePath)
         self.levelIcon = img.resize(size=self.levelIconSize)
         
