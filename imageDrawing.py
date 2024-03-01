@@ -105,6 +105,16 @@ def processToken(token:ResourceToken, output_path:Path):
     tokenImg = img.resize(size=(pixels,pixels))
     tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
+def generateVIPCardBack(outputFolder:Path, imagePath:Path):
+    img = Image.open(imagePath)
+    card_size = VIP_CARD_SIZE_IN
+    output_size = tuple(x*OUTPUT_DPI for x in card_size)
+    border_color = "Black"
+    cardImage = shrink_image(img, output_size, border_color)
+    output_path = outputFolder / "VIPCardBack.png"
+    cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+    return output_path
+
 
 def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidSharedAssetts):
     img = Image.open(vipCard.imagePath)

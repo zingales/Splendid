@@ -197,6 +197,10 @@ def main():
 
     # Load VIP cards
         
+    vipcardBackImagePath = assetsPath / "VIPCardBack.png"
+    imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePath)
+    print(f"VIP card back produced")
+        
     vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCards.csv")
     print(f"number of Vip cards {len(vipCards)}")
     print(f"number of bad rows {len(errors)}")
