@@ -1,4 +1,4 @@
-from splendid import ResourceCard, ResourceType,VIPCard
+from splendid import ResourceCard, ResourceType,VIPCard, ResourceToken
 
 from PIL import Image, ImageOps, ImageFont,  ImageDraw 
 from pathlib import Path
@@ -86,6 +86,12 @@ def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image):
     for i in range(number):
         image.paste(icon, (startX+(x*i),centerY),mask=icon)
 
+
+
+def processToken(token:ResourceToken, output_path:Path):
+    img = Image.open(token.imagePath)
+    tokenImg = img.resize(size=(450,450))
+    tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
 
 def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidSharedAssetts):

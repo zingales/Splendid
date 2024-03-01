@@ -12,7 +12,12 @@ class ResourceType(Enum):
 
     def __repr__(self):
         return f'{ResourceType}:{self.name}'
+
+class ResourceToken(object):
     
+    def __init__(self, resourceType:ResourceType, imagePath=None) -> None:
+        self.resourceType = resourceType
+        self.imagePath = imagePath
 
 class VIPCard(object):
     requires:dict[ResourceType,int]

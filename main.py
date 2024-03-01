@@ -6,7 +6,7 @@ import imageDrawing
 import tempfile
 
 
-from splendid import ResourceType, ResourceCard, VIPCard
+from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken
 
 conversionColorToResourceType = {
     'Black': ResourceType.Air,
@@ -119,7 +119,6 @@ def loadAllResourceImagePaths(assetFolder:Path):
 
 
 def main():
-    # outputFolder = tempfile.TemporaryDirectory(dir="/Users/gzingales/Downloads/SplendidOutput")
     outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v2")
     assetsPath = Path("assets")
 
@@ -138,11 +137,23 @@ def main():
         ResourceType.WhiteLotus:assetsPath/ "Resource Type Images" / "WhiteLotus.png",
     }
 
+    resourceTokens = list()
     for resourceType, image in resourceTypeToImage.items():
         sharedImages.saveResourceTypeImage(resourceType, image)
+        resourceTokens.append(ResourceToken(resourceType, image))
+
+    avatarPaths = assetsPath / "Avatar Coins"
+    imagePaths = Path(avatarPaths).glob("*.png")
+    for imagePath in imagePaths:
+        resourceTokens.append(ResourceToken(ResourceType.Avatar, imagePath))
 
 
-    # Load Resource Cards
+    tokenCounts = defaultdict(int)
+    for token in resourceTokens:
+        tokenPath = outputFolderPath / f"token_{token.resourceType.name}_{tokenCounts[token.resourceType]}.png"
+        imageDrawing.processToken(token, tokenPath)
+        tokenCounts[token.resourceType]+=1
+
     # resourceCardsCSV = assetsPath / "resourceCards.csv"
     resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
     resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
@@ -205,7 +216,7 @@ def main():
 
     print(f"VIP cards produced: {vipCardsProduced}")
 
-        
+
 
 if __name__ == "__main__":
     main()
