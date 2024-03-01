@@ -1,4 +1,4 @@
-from splendid import ResourceCard, ResourceType
+from splendid import ResourceCard, ResourceType,VIPCard
 
 from PIL import Image, ImageOps, ImageFont,  ImageDraw 
 from pathlib import Path
@@ -11,11 +11,22 @@ OUTPUT_DPI = 150
 BORDER_SIZE = 10
 
 
+# Delicate background 
+# resourceTypeToPILColor = {
+#     ResourceType.Air: (249,239,210), 
+#     ResourceType.Earth: (225,252,223), 
+#     ResourceType.Fire: (251,233,221), 
+#     ResourceType.Water: (215,234,247), 
+#     ResourceType.WhiteLotus: "White",
+#     # I don't think the below is ever needed tbh. Just including it for completness
+#     ResourceType.Avatar: "Black"
+# }
+
 resourceTypeToPILColor = {
-    ResourceType.Air: "Gold", 
-    ResourceType.Earth: "Green", 
-    ResourceType.Fire: "Red", 
-    ResourceType.Water: "Blue", 
+    ResourceType.Air: (245,202,107), 
+    ResourceType.Earth: (155,201,102), 
+    ResourceType.Fire: (228,141,113), 
+    ResourceType.Water: (96,156,230), 
     ResourceType.WhiteLotus: "White",
     # I don't think the below is ever needed tbh. Just including it for completness
     ResourceType.Avatar: "Black"
@@ -60,8 +71,10 @@ def addNumber(draw:ImageDraw, number:int, centeredAt:tuple[int,int], font):
     text = str(number)
     _, _, w, h = draw.textbbox(xy= (0, 0), text=text, font=font)
 
-    # loc = (((centerX-w)//2)+centerX, ((centerY-h)//2)+centerY)
-    loc = centeredAt
+    
+    loc = (centerX-(w//2), centerY-(h//2))
+    if loc[0] < 0 or loc[1] < 0:
+        raise ValueError("Center at postion is smaller than the width of the number")
     draw.text(loc,text,fill='white', font=font, stroke_width=2, stroke_fill='black')
 
 
@@ -73,6 +86,61 @@ def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image):
     for i in range(number):
         image.paste(icon, (startX+(x*i),centerY),mask=icon)
 
+
+
+def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidSharedAssetts):
+    img = Image.open(vipCard.imagePath)
+    card_size = PLAYING_CARD_SIZE_IN
+    output_size = tuple(x*OUTPUT_DPI for x in card_size)
+    border_color = "Black"
+    new_image = shrink_image(img, output_size, border_color)
+    cardImage = add_border(new_image, border_color)
+
+
+    bg_w, bg_h = cardImage.size
+
+    resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+
+    reqW,reqH = sharedImages.requiresSize
+    
+    numberOfrequirements = len(vipCard.requires)
+
+    interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (numberOfrequirements*reqW)) // numberOfrequirements
+    startingXOffset = BORDER_SIZE + interstitialSpaces//2
+    
+    xOffset = startingXOffset
+    yOffset = (bg_h-BORDER_SIZE-reqH-5)
+    for resourceType in resourceTypeOrder:
+        if vipCard.requires.get(resourceType, 0) == 0:
+            continue
+
+        y = yOffset
+        toPaste = sharedImages.getRequiresImage(resourceType)
+        cardImage.paste(toPaste, (xOffset,y),mask=toPaste)
+        xOffset += (interstitialSpaces+reqW)
+
+
+
+    ### Everything requiring a draw object
+    draw = ImageDraw.Draw(cardImage)
+
+    # Add Numbers to image
+    font = getFont()
+    addNumber(draw, vipCard.victoryPoints, (25,25), font)
+
+    font = getFont(fontsize=35)
+    # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
+    xOffset = startingXOffset+reqW
+    for resourceType in resourceTypeOrder:
+        resourceCount = vipCard.requires.get(resourceType, 0)
+        if resourceCount == 0:
+            continue
+
+        y = yOffset 
+        addNumber(draw, resourceCount, (xOffset,y), font)
+        xOffset+= interstitialSpaces+reqW
+
+    cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
 
 def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
@@ -88,9 +156,9 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
 
     # Add produces in the corner
     producesImage = sharedImages.getProducesImage(resourceCard.produces)
-    img_w, img_h = producesImage.size
+    pImg_w, pImg_h = producesImage.size
     bg_w, bg_h = cardImage.size
-    offset = ((bg_w - img_w)-BORDER_SIZE, BORDER_SIZE)
+    offset = ((bg_w - pImg_w)-BORDER_SIZE, BORDER_SIZE)
     cardImage.paste(producesImage, offset, mask=producesImage)
 
     # Add Requirements across the bottom. 
@@ -98,14 +166,17 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     # WhiteLotus, Water, Earth, Fire, Air
     resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
 
-    xOffsetMultiple = (bg_w - 2*BORDER_SIZE) // 5
-    startingXOffset = BORDER_SIZE
-    yOffset = (bg_h-BORDER_SIZE-img_h)
+    reqW,reqH = sharedImages.requiresSize
+    
+    interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
+    startingXOffset = BORDER_SIZE + interstitialSpaces//2
+    
+    yOffset = (bg_h-BORDER_SIZE-reqH-5)
     for index, resourceType in enumerate(resourceTypeOrder):
         if resourceCard.requires.get(resourceType, 0) == 0:
             continue
 
-        x = xOffsetMultiple*index+startingXOffset
+        x = (interstitialSpaces+reqW)*index+startingXOffset
         y = yOffset
         toPaste = sharedImages.getRequiresImage(resourceType)
         cardImage.paste(toPaste, (x,y),mask=toPaste)
@@ -121,8 +192,9 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     # Add Numbers to image
     font = getFont()
     if resourceCard.victoryPoints != 0:
-        addNumber(draw, resourceCard.victoryPoints, (20,20), font)
+        addNumber(draw, resourceCard.victoryPoints, (25,25), font)
 
+    font = getFont(fontsize=35)
     # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
     for index, resourceType in enumerate(resourceTypeOrder):
         resourceCount = resourceCard.requires.get(resourceType, 0)
@@ -131,8 +203,8 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
 
         # x = xOffsetMultiple*(index+0.5)+startingXOffset
         # y = yOffset + (img_h//2)
-        x = xOffsetMultiple*index+startingXOffset
-        y = yOffset
+        x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
+        y = yOffset 
         addNumber(draw, resourceCount, (x,y), font)
     
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))

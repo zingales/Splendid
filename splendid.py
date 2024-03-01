@@ -10,12 +10,28 @@ class ResourceType(Enum):
     Air=5
     Avatar=6
 
-
     def __repr__(self):
         return f'{ResourceType}:{self.name}'
     
 
+class VIPCard(object):
+    requires:dict[ResourceType,int]
+    victoryPoints:int
+    imagePath: Path
 
+    def __init__(self, requires:dict[ResourceType,int], victoryPoints:int) -> None:
+        self.requires = requires
+        self.victoryPoints = victoryPoints
+        self.imagePath = None
+
+    def __repr__(self) -> str:
+        resrouceStrings = list() 
+        for resource, count in self.requires.items():
+            if count == 0:
+                continue
+            resrouceStrings.append(f"{resource}: {count}")
+        return f"Splendid.VIPCard(VP: {self.victoryPoints}, requires:[{', '.join(resrouceStrings)}], imagePath: {self.imagePath}"
+    
 
 class ResourceCard(object):
     produces:ResourceType

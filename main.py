@@ -6,7 +6,7 @@ import imageDrawing
 import tempfile
 
 
-from splendid import ResourceType, ResourceCard
+from splendid import ResourceType, ResourceCard, VIPCard
 
 conversionColorToResourceType = {
     'Black': ResourceType.Air,
@@ -18,15 +18,39 @@ conversionColorToResourceType = {
 }
 
 
-class BadResourceCSVRow(ValueError):
+class BadCSVRow(ValueError):
     def __init__(self, csvRowNumber, rowContents, error):            
         # Call the base class constructor with the parameters it needs
         super().__init__(f"Bad CSV Row. Row no.{csvRowNumber}, {error}: row contents {rowContents}")
-            
-        # Now for your custom code...
+
         self.rowNumber = csvRowNumber
         self.previousError = error
         self.rowContents = rowContents
+
+
+def loadVIPCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exception]]:
+    with open(csvFile, newline='\n') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=',', quotechar="'")
+        cards = list()
+        errors = list()
+        rowCount = 1
+        for row in reader:
+            try:
+                victoryPoints = int(row['Victor Points']) 
+                requirements = dict()
+                for ogColor, resourceType in conversionColorToResourceType.items():
+                    # no resource card requires gold
+                    if resourceType == ResourceType.Avatar:
+                        continue
+                    if row[ogColor] != '':
+                        requirements[resourceType] = int(row[ogColor])
+                cards.append(VIPCard(requires=requirements, victoryPoints=victoryPoints))
+            except (KeyError,ValueError) as e:
+                customError = BadCSVRow(rowCount, f"{row}", e)
+                errors.append(customError)
+            rowCount+=1
+
+    return cards, errors
 
 
 def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exception]]:
@@ -45,10 +69,11 @@ def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exceptio
                     # no resource card requires gold
                     if resourceType == ResourceType.Avatar:
                         continue
-                    requirements[resourceType] = 0 if row[ogColor] == '' else int(row[ogColor])
+                    if row[ogColor] != '':
+                        requirements[resourceType] = int(row[ogColor])
                 cards.append(ResourceCard(produces=generates, requires=requirements,level=cardLevel,victoryPoints=victoryPoints))
             except (KeyError,ValueError) as e:
-                customError = BadResourceCSVRow(rowCount, f"{row}", e)
+                customError = BadCSVRow(rowCount, f"{row}", e)
                 errors.append(customError)
 
             rowCount+=1
@@ -95,7 +120,7 @@ def loadAllResourceImagePaths(assetFolder:Path):
 
 def main():
     # outputFolder = tempfile.TemporaryDirectory(dir="/Users/gzingales/Downloads/SplendidOutput")
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v1")
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v2")
     assetsPath = Path("assets")
 
 
@@ -118,9 +143,10 @@ def main():
 
 
     # Load Resource Cards
-    resourceCardsCSV = assetsPath / "resourceCards.csv"
-    cards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
-    print(f"number of cards {len(cards)}")
+    # resourceCardsCSV = assetsPath / "resourceCards.csv"
+    resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
+    resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
+    print(f"number of cards {len(resourceCards)}")
     print(f"number of bad rows {len(errors)}")
     if len(errors) > 0:
         print(f"{errors}")
@@ -136,7 +162,7 @@ def main():
         ResourceType.Fire:0,
         ResourceType.WhiteLotus:0
     }
-    for card in cards:
+    for card in resourceCards:
         
         try:
             if card.imagePath is None:
@@ -153,6 +179,32 @@ def main():
     print(f"Resource Cards Generated")
     for resourceType, totalCount in cardsOfTypeProduced.items():
         print(f"{resourceType.name}: {totalCount}")
+
+
+    # Load VIP cards
+        
+    vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCards.csv")
+    print(f"number of Vip cards {len(vipCards)}")
+    print(f"number of bad rows {len(errors)}")
+    if len(errors) > 0:
+        print(f"{errors}")
+
+    path = assetsPath / "VIP Images"
+    images = Path(path).glob("*.png")
+    vipImagesPaths = [str(p) for p in images]
+
+    vipCardsProduced = 0
+    for card in vipCards:
+        if card.imagePath is None:
+            card.imagePath = vipImagesPaths.pop()
+        
+        outputPath = outputFolderPath / f"VIP_{vipCardsProduced}.png"
+        imageDrawing.processVIPCard(card, outputPath, sharedImages)
+        vipCardsProduced+=1
+
+
+    print(f"VIP cards produced: {vipCardsProduced}")
+
         
 
 if __name__ == "__main__":
