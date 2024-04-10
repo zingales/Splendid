@@ -8,7 +8,7 @@ PLAYING_CARD_SIZE_IN = (2.5, 3.7)
 
 VIP_CARD_SIZE_IN = (2.5, 2.5)
 
-RESOURCE_CARD_SIZE_IN = (4.5, 2.5)
+RESOURCE_CARD_SIZE_IN = (4, 2.25)
 
 OUTPUT_DPI = 150
 
@@ -34,7 +34,7 @@ resourceTypeToPILColor = {
     ResourceType.Fire: (228,141,113), 
     ResourceType.Water: (96,156,230), 
     ResourceType.WhiteLotus: "White",
-    # I don't think the below is ever needed tbh. Just including it for completness
+    # I don't think the below is ever needed. Just including it for completness
     ResourceType.Avatar: "Black"
 }
 
@@ -68,7 +68,7 @@ class SplendidSharedAssetts(object):
 
 
 
-def getFont(fontname='Keyboard.ttf', fontsize=50):
+def getFont(fontname='Herculanum.ttf', fontsize=50):
     return ImageFont.truetype(fontname, fontsize)
 
 def addNumber(draw:ImageDraw, number:int, centeredAt:tuple[int,int], font):
@@ -122,8 +122,8 @@ def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidShare
     card_size = VIP_CARD_SIZE_IN
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = "Black"
-    new_image = shrink_image(img, output_size, border_color)
-    cardImage = add_border(new_image, border_color)
+    new_image = shrink_image(img, output_size, "White")
+    cardImage = add_border(new_image, border_color, border_size=1)
 
 
     bg_w, bg_h = cardImage.size

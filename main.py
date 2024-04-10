@@ -111,21 +111,8 @@ def loadAllResourceImagePaths(assetFolder:Path):
 def guaranteeFolder(path:Path):
     path.mkdir(parents=True, exist_ok=True)
 
-def main():
 
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v4")
-    outputImageFolderPath = outputFolderPath / "images"
-    assetsPath = Path("assets")
-
-
-    guaranteeFolder(outputImageFolderPath)
-
-    #Load resource type images
-
-    sharedImages = imageDrawing.SplendidSharedAssetts()
-
-    sharedImages.loadLevelIcon(assetsPath/ "level_icon.png")
-
+def generateTokenCards(assetsPath, outputImageFolderPath, sharedImages):
 
     resourceTypeToImage = {
         ResourceType.Air: assetsPath/ "Resource Type Images" / "Air.png",
@@ -135,9 +122,6 @@ def main():
         ResourceType.WhiteLotus:assetsPath/ "Resource Type Images" / "WhiteLotus.png",
     }
 
-    pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
-
-    
     resourceTokens = list()
     for resourceType, image in resourceTypeToImage.items():
         sharedImages.loadResourceTypeImage(resourceType, image)
@@ -168,15 +152,16 @@ def main():
             # Each resource token has 7 identical multiples
             imageTuples.append((token.renderedFrontImage, None))
 
-    pdfManager.makePDF(imageTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
+    return imageTuples
 
 
+def generateResourceCards(assetsPath, outputImageFolderPath, sharedImages):
     resourceCardBackPath = assetsPath/ "ResourceCardBack.png"
     resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
     print(f"Resource Cards Backs Generated")
 
-    # resourceCardsCSV = assetsPath / "resourceCards.csv"
-    resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
+    resourceCardsCSV = assetsPath / "resourceCards.csv"
+    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
     resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
     print(f"number of cards {len(resourceCards)}")
     print(f"number of bad rows {len(errors)}")
@@ -184,8 +169,6 @@ def main():
         print(f"{errors}")
     
     resourceTypeToImageList = loadAllResourceImagePaths(assetsPath)
-
-    # assign an image for each card
 
     cardsOfTypeProduced = {
         ResourceType.Air: 0,
@@ -216,15 +199,15 @@ def main():
 
     imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in resourceCards]
 
-    pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
+    return imageTuples
 
-    # Load VIP cards
-        
+
+def generateVipCards(assetsPath, outputImageFolderPath, sharedImages):
     vipcardBackImagePathRaw = assetsPath / "VIPCardBack.png"
     vipcardBackImagePath = imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePathRaw)
     print(f"VIP card back produced")
-        
-    vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCards.csv")
+
+    vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCardsTriple.csv")    
     print(f"number of Vip cards {len(vipCards)}")
     print(f"number of bad rows {len(errors)}")
     if len(errors) > 0:
@@ -250,10 +233,38 @@ def main():
 
     imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in vipCards]
 
+    return imageTuples
+
+def main(outputFolderPath, assetsPath):
+
+    outputImageFolderPath = outputFolderPath / "images"
+    
+
+    guaranteeFolder(outputImageFolderPath)
+
+    #Load resource type images
+
+    sharedImages = imageDrawing.SplendidSharedAssetts()
+
+    sharedImages.loadLevelIcon(assetsPath/ "level_icon.png")
+
+    pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
+
+    # Generate Tokens Pdf
+    # tokenTuples = generateTokenCards(assetsPath, outputImageFolderPath, sharedImages)
+    # pdfManager.makePDF(tokenTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
+
+    # Generate Resource Pdf
+    imageTuples = generateResourceCards(assetsPath, outputImageFolderPath, sharedImages)
+    pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
+
+    # Genereate VIP Pdf
+    imageTuples = generateVipCards(assetsPath, outputImageFolderPath, sharedImages)
     pdfManager.makePDF(imageTuples, outputFolderPath/"VIPCards.pdf" ,imageDrawing.VIP_CARD_SIZE_IN)
 
 
-
-
 if __name__ == "__main__":
-    main()
+    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v5")
+    assetsPath = Path("assets")
+
+    main(outputFolderPath, assetsPath)

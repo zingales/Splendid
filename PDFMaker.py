@@ -3,13 +3,10 @@ from reportlab.lib import pagesizes
 from pathlib import Path
 
 
-RESOURCE_CARD_SIZE_IN = (4.5, 2.5)
 POINTS_PER_IN = 72
 MARGIN_IN_PTS = 24
 
-
 US_LETTER_IN = (8.5, 11)
-
 
 class PdfSize(object):
 
@@ -48,7 +45,6 @@ class PdfSize(object):
                 height_pixels = int ((self.min_height + (height_padding/2) + (h * new_box_height)))
                 width_pixels = int( (self.min_width + (width_padding/2) + (w * new_box_width)) )
                 coordinates.append((width_pixels, height_pixels))
-                # int(self.width-width_pixels-tile_width)
                 backCoordinates.append((width_pixels, int(self.height-height_pixels-tile_height)))
             
 
@@ -75,6 +71,7 @@ class PdfSize(object):
                 if backImage is not None:
                     nextPage.append((i,backImage))
                 count+=1
+
             # To start the next page you must first render this canvas then call draw again 
             myfile.showPage()
             for i,image in nextPage:
