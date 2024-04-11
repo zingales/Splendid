@@ -1,4 +1,4 @@
-from splendid import ResourceCard, ResourceType,VIPCard, ResourceToken
+from splendid import ResourceCard, ResourceType, VIPCard, ResourceToken
 
 from PIL import Image, ImageOps, ImageFont,  ImageDraw 
 from pathlib import Path
@@ -65,8 +65,6 @@ class SplendidSharedAssetts(object):
         img = Image.open(imagePath)
         self.levelIcon = img.resize(size=self.levelIconSize)
         
-
-
 
 def getFont(fontname='Herculanum.ttf', fontsize=50):
     return ImageFont.truetype(fontname, fontsize)
@@ -165,7 +163,7 @@ def processVIPCard(vipCard:VIPCard, output_path:Path, sharedImages:SplendidShare
         if resourceCount == 0:
             continue
 
-        y = yOffset 
+        y = yOffset
         addNumber(draw, resourceCount, (xOffset,y), font)
         xOffset+= interstitialSpaces+reqW
 
@@ -261,10 +259,13 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
 
-def add_border(img, border_color, border_size=BORDER_SIZE):
+def add_border(img, border_color, border_size=BORDER_SIZE, cropInsteadOfShrink=True):
     x,y = img.size
     
-    smaller_image = img.crop(box=(border_size,border_size,x-border_size,y-border_size))
+    if cropInsteadOfShrink:
+        smaller_image = img.crop(box=(border_size,border_size,x-border_size,y-border_size))
+    else:
+        smaller_image = None
     return ImageOps.expand(smaller_image,  border_size, fill = border_color)
 
 def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
@@ -285,7 +286,6 @@ def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
 
     if ratioed_y > desired_y:
         x = ratioed_x
-
         fill_required = True
 
     

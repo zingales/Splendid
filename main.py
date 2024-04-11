@@ -155,18 +155,10 @@ def generateTokenCards(assetsPath, outputImageFolderPath, sharedImages):
     return imageTuples
 
 
-def generateResourceCards(assetsPath, outputImageFolderPath, sharedImages):
+def generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, sharedImages):
     resourceCardBackPath = assetsPath/ "ResourceCardBack.png"
     resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
     print(f"Resource Cards Backs Generated")
-
-    resourceCardsCSV = assetsPath / "resourceCards.csv"
-    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
-    resourceCards,errors = loadResourceCardsFromCsv(resourceCardsCSV)
-    print(f"number of cards {len(resourceCards)}")
-    print(f"number of bad rows {len(errors)}")
-    if len(errors) > 0:
-        print(f"{errors}")
     
     resourceTypeToImageList = loadAllResourceImagePaths(assetsPath)
 
@@ -177,8 +169,8 @@ def generateResourceCards(assetsPath, outputImageFolderPath, sharedImages):
         ResourceType.Fire:0,
         ResourceType.WhiteLotus:0
     }
+    
     for card in resourceCards:
-        
         try:
             if card.imagePath is None:
                 card.imagePath = resourceTypeToImageList[card.produces].pop()
@@ -202,16 +194,10 @@ def generateResourceCards(assetsPath, outputImageFolderPath, sharedImages):
     return imageTuples
 
 
-def generateVipCards(assetsPath, outputImageFolderPath, sharedImages):
+def generateVipCards(vipCards, assetsPath, outputImageFolderPath, sharedImages):
     vipcardBackImagePathRaw = assetsPath / "VIPCardBack.png"
     vipcardBackImagePath = imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePathRaw)
     print(f"VIP card back produced")
-
-    vipCards, errors = loadVIPCardsFromCsv(assetsPath / "VIPCardsTriple.csv")    
-    print(f"number of Vip cards {len(vipCards)}")
-    print(f"number of bad rows {len(errors)}")
-    if len(errors) > 0:
-        print(f"{errors}")
 
     path = assetsPath / "VIP Images"
     images = Path(path).glob("*.png")
@@ -235,7 +221,7 @@ def generateVipCards(assetsPath, outputImageFolderPath, sharedImages):
 
     return imageTuples
 
-def main(outputFolderPath, assetsPath):
+def main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV):
 
     outputImageFolderPath = outputFolderPath / "images"
     
@@ -255,11 +241,23 @@ def main(outputFolderPath, assetsPath):
     # pdfManager.makePDF(tokenTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
 
     # Generate Resource Pdf
-    imageTuples = generateResourceCards(assetsPath, outputImageFolderPath, sharedImages)
+    resourceCards, errors = loadResourceCardsFromCsv(resourceCardsCSV)
+    print(f"number of cards {len(resourceCards)}")
+    print(f"number of bad rows {len(errors)}")
+    if len(errors) > 0:
+        print(f"{errors}")
+    
+    imageTuples = generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, sharedImages)
     pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
 
     # Genereate VIP Pdf
-    imageTuples = generateVipCards(assetsPath, outputImageFolderPath, sharedImages)
+    vipCards, errors = loadVIPCardsFromCsv(vipCardsCSV)    
+    print(f"number of Vip cards {len(vipCards)}")
+    print(f"number of bad rows {len(errors)}")
+    if len(errors) > 0:
+        print(f"{errors}")
+
+    imageTuples = generateVipCards(vipCards, assetsPath, outputImageFolderPath, sharedImages)
     pdfManager.makePDF(imageTuples, outputFolderPath/"VIPCards.pdf" ,imageDrawing.VIP_CARD_SIZE_IN)
 
 
@@ -267,4 +265,9 @@ if __name__ == "__main__":
     outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v5")
     assetsPath = Path("assets")
 
-    main(outputFolderPath, assetsPath)
+    resourceCardsCSV = assetsPath / "resourceCards.csv"
+    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
+
+    vipCardsCSV = assetsPath / "VIPCardsTriple.csv"
+
+    main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV)
