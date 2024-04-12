@@ -6,9 +6,12 @@ from pathlib import Path
 POINTS_PER_IN = 72
 MARGIN_IN_PTS = 24
 
-US_LETTER_IN = (8.5, 11)
+US_LETTER_IN = (
+    pagesizes.LETTER[0]/POINTS_PER_IN, 
+    pagesizes.LETTER[1]/POINTS_PER_IN
+    )
 
-class PdfSize(object):
+class PdfMaker(object):
 
     def __init__(self, widthInInches, heightInInches) -> None:
         self.width = widthInInches * POINTS_PER_IN
@@ -56,7 +59,7 @@ class PdfSize(object):
     def makePDF(self, frontAndBackImages:list[tuple[Path, Path]], outputPath:Path, imageSizeInInches:tuple[float, float]):
 
         imageWidth = imageSizeInInches[0] * POINTS_PER_IN
-        imageHeight = imageSizeInInches[1]*POINTS_PER_IN
+        imageHeight = imageSizeInInches[1] * POINTS_PER_IN
         coordinates, backCoordinates = self.generateTiledCoordinates(imageWidth, imageHeight)
 
         myfile = Canvas(str(outputPath), pagesize=(self.width, self.height))

@@ -20,7 +20,7 @@ class ResourceType(Enum):
 class ResourceToken(object):
     resourceType:ResourceType
     imagePath: Path
-    renderedFrontImage:Path 
+    renderedFrontImage:Path
 
     def __init__(self, resourceType:ResourceType, imagePath=None) -> None:
         self.resourceType = resourceType

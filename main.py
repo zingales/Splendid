@@ -4,7 +4,7 @@ from collections import defaultdict
 import logging
 
 import imageDrawing
-from PDFMaker import PdfSize, US_LETTER_IN
+from PDFMaker import PdfMaker, US_LETTER_IN
 
 
 from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken
@@ -150,7 +150,12 @@ def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exceptio
                         continue
                     if row[ogColor] != '':
                         requirements[resourceType] = int(row[ogColor])
-                cards.append(ResourceCard(produces=generates, requires=requirements,level=cardLevel,victoryPoints=victoryPoints))
+                cards.append(ResourceCard(
+                    produces=generates, 
+                    requires=requirements,
+                    level=cardLevel,
+                    victoryPoints=victoryPoints
+                ))
             except (KeyError,ValueError) as e:
                 customError = BadCSVRow(rowCount, f"{row}", e)
                 errors.append(customError)
@@ -294,7 +299,7 @@ def main(outputFolderPath, assetGetter:AssetGetter, resourceCardsCSV, vipCardsCS
 
     sharedImages.loadLevelIcon( assetGetter.getLevelIcon())
 
-    pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
+    pdfManager = PdfMaker(US_LETTER_IN[1], US_LETTER_IN[0])
 
     # Generate Tokens Pdf
     # tokenTuples = generateTokenCards(assetGetter, outputImageFolderPath, sharedImages)
