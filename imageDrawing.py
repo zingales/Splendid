@@ -39,6 +39,8 @@ resourceTypeToPILColor = {
 }
 
 
+
+
 class SplendidSharedAssetts(object):
 
     producesSize = (100,100)
@@ -65,9 +67,17 @@ class SplendidSharedAssetts(object):
         img = Image.open(imagePath)
         self.levelIcon = img.resize(size=self.levelIconSize)
         
+# def getFont(fontname='arial.ttf', fontsize=50):
+def getFont(fontname=None, fontsize=50):
+    if fontname is None:
+        fontname = 'Herculanum.ttf'    
+    try:
+        return ImageFont.truetype(fontname, fontsize)
+    except OSError:
+        print(f"could not find font {fontname}. Loading default instead")
+        return ImageFont.load_default(size=fontsize)
 
-def getFont(fontname='Herculanum.ttf', fontsize=50):
-    return ImageFont.truetype(fontname, fontsize)
+    return 
 
 def addNumber(draw:ImageDraw, number:int, centeredAt:tuple[int,int], font):
 

@@ -12,6 +12,10 @@ class ResourceType(Enum):
 
     def __repr__(self):
         return f'{ResourceType}:{self.name}'
+    
+    @classmethod
+    def allButAvatar(cls):
+        return [ResourceType.Air, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.WhiteLotus]
 
 class ResourceToken(object):
     resourceType:ResourceType

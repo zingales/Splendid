@@ -18,6 +18,85 @@ conversionColorToResourceType = {
 }
 
 
+class AssetGetter(object):
+
+    def __init__(self, assetsPath:Path) -> None:
+        self.assetsPath = assetsPath
+        resourceTypeFolder = "Resource Type Images"
+        self.resourceTypeToImage = {
+            ResourceType.Air: assetsPath/ resourceTypeFolder / "Air.png",
+            ResourceType.Water:assetsPath/ resourceTypeFolder / "Water.png",
+            ResourceType.Earth:assetsPath/ resourceTypeFolder / "Earth.png",
+            ResourceType.Fire:assetsPath/ resourceTypeFolder / "Fire.png",
+            ResourceType.WhiteLotus:assetsPath/ resourceTypeFolder / "WhiteLotus.png",
+        }
+
+        resourceCardFolder = "Resource Cards Images"
+        self.resourceTypeToResourceCardFolder = {
+            ResourceType.Air: assetsPath/ resourceCardFolder / "Air Nomads",
+            ResourceType.Water:assetsPath/ resourceCardFolder / "Water Tribe",
+            ResourceType.Earth:assetsPath/ resourceCardFolder / "Earth Kingdom",
+            ResourceType.Fire:assetsPath/ resourceCardFolder / "Fire Nation",
+            ResourceType.WhiteLotus:assetsPath/ resourceCardFolder / "White Lotus",
+        }
+
+    def getAvatarImagesPath(self) -> Path:
+        path = self.assetsPath / "Avatar Coins"
+        return path.glob("*.png")
+    
+    def getResourceImagePath(self, resourceType: ResourceType) -> Path:
+        return self.resourceTypeToImage[resourceType]
+
+    def getLevelIcon(self):
+        return self.assetsPath / "level_icon.png"
+        
+
+    def getResourceCardBackPath(self):
+        return self.assetsPath/ "ResourceCardBack.png"
+    
+
+    def getResourceCardImagePaths(self, resourceType: ResourceType) -> list[Path]:
+        path = self.resourceTypeToResourceCardFolder[resourceType]
+        images = Path(path).glob("*.png")
+        return list(images)
+
+    def depre_loadAllResourceImagePaths(self):
+        ResourceCardFolderName = "Resource Cards Images"    
+        AirFolder = "Air Nomads"
+        EarthFolder = "Earth Kingdom"
+        FireFolder = "Fire Nation"
+        WaterFolder = "Water Tribe"
+        WhiteLotusFolder = "White Lotus"
+
+        folderNameToResourceType = {
+            AirFolder:ResourceType.Air,
+            EarthFolder:ResourceType.Earth,
+            FireFolder:ResourceType.Fire,
+            WaterFolder:ResourceType.Water,
+            WhiteLotusFolder:ResourceType.WhiteLotus
+        }
+
+        toReturn = defaultdict(list)
+
+        for folderName, resourceType in folderNameToResourceType.items():
+            path = self.assetsPath / ResourceCardFolderName / folderName
+            if path.is_dir():
+                images = Path(path).glob("*.png")
+                toReturn[resourceType] = list(images)
+            else:
+                print(f"path {path} doesn't exist")
+
+
+        return toReturn
+    
+    def getVipCardBackImageRaw(self):
+        return self.assetsPath / "VIPCardBack.png"
+    
+    def getVipImagePaths(self):
+        path = self.assetsPath / "VIP Images"
+        images = Path(path).glob("*.png")
+        return list(images)
+
 class BadCSVRow(ValueError):
     def __init__(self, csvRowNumber, rowContents, error):            
         super().__init__(f"Bad CSV Row. Row no.{csvRowNumber}, {error}: row contents {rowContents}")
@@ -81,55 +160,25 @@ def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exceptio
 
 
 
-def loadAllResourceImagePaths(assetFolder:Path):
-    ResourceCardFolderName = "Resource Cards Images"    
-    AirFolder = "Air Tribe"
-    EarthFolder = "Earth Kingdom"
-    FireFolder = "Fire Nation"
-    WaterFolder = "Water Tribe"
-    WhiteLotusFolder = "White Lotus"
 
-    folderNameToResourceType = {
-        AirFolder:ResourceType.Air,
-        EarthFolder:ResourceType.Earth,
-        FireFolder:ResourceType.Fire,
-        WaterFolder:ResourceType.Water,
-        WhiteLotusFolder:ResourceType.WhiteLotus
-    }
-
-    toReturn = defaultdict(list)
-
-    for folderName, resourceType in folderNameToResourceType.items():
-        path = assetFolder / ResourceCardFolderName / folderName
-
-        images = Path(path).glob("*.png")
-        toReturn[resourceType] = [str(p) for p in images]
-
-
-    return toReturn
 
 def guaranteeFolder(path:Path):
     path.mkdir(parents=True, exist_ok=True)
 
 
-def generateTokenCards(assetsPath, outputImageFolderPath, sharedImages):
-
-    resourceTypeToImage = {
-        ResourceType.Air: assetsPath/ "Resource Type Images" / "Air.png",
-        ResourceType.Water:assetsPath/ "Resource Type Images" / "Water.png",
-        ResourceType.Earth:assetsPath/ "Resource Type Images" / "Earth.png",
-        ResourceType.Fire:assetsPath/ "Resource Type Images" / "Fire.png",
-        ResourceType.WhiteLotus:assetsPath/ "Resource Type Images" / "WhiteLotus.png",
-    }
+def generateTokenCards(assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
 
     resourceTokens = list()
-    for resourceType, image in resourceTypeToImage.items():
+    for resourceType in ResourceType:
+        if (resourceType == ResourceType.Avatar):
+            continue
+        image = assetGetter.getResourceImagePath(resourceType)
         sharedImages.loadResourceTypeImage(resourceType, image)
         resourceTokens.append(ResourceToken(resourceType, image))
 
     avatarTokens = list()
-    avatarPaths = assetsPath / "Avatar Coins"
-    imagePaths = Path(avatarPaths).glob("*.png")
+    imagePaths = assetGetter.getAvatarImagesPath()
+
     for imagePath in imagePaths:
         avatarTokens.append(ResourceToken(ResourceType.Avatar, imagePath))
 
@@ -155,12 +204,15 @@ def generateTokenCards(assetsPath, outputImageFolderPath, sharedImages):
     return imageTuples
 
 
-def generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, sharedImages):
-    resourceCardBackPath = assetsPath/ "ResourceCardBack.png"
+def generateResourceCards(resourceCards, assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
+    resourceCardBackPath = assetGetter.getResourceCardBackPath()
     resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
     print(f"Resource Cards Backs Generated")
     
-    resourceTypeToImageList = loadAllResourceImagePaths(assetsPath)
+    resourceTypeToImageList = dict()
+
+    for type in ResourceType.allButAvatar():
+        resourceTypeToImageList[type] = assetGetter.getResourceCardImagePaths(type)
 
     cardsOfTypeProduced = {
         ResourceType.Air: 0,
@@ -170,17 +222,21 @@ def generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, shar
         ResourceType.WhiteLotus:0
     }
     
+    producedCards = list()
     for card in resourceCards:
         try:
             if card.imagePath is None:
-                card.imagePath = resourceTypeToImageList[card.produces].pop()
-
+                if len(resourceTypeToImageList[card.produces]) > 0:
+                    card.imagePath = resourceTypeToImageList[card.produces].pop()
+                else:
+                    continue
             outputPath = outputImageFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
             imageDrawing.processResourceCard(card, outputPath, sharedImages)
             card.renderedFrontImage = outputPath
             card.renderedBackImage = resourceCardBackPaths[card.level-1]
 
             cardsOfTypeProduced[card.produces]+=1
+            producedCards.append(card)
         except IndexError as e:
             print(e)
 
@@ -189,19 +245,17 @@ def generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, shar
     for resourceType, totalCount in cardsOfTypeProduced.items():
         print(f"{resourceType.name}: {totalCount}")
 
-    imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in resourceCards]
+    imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in producedCards]
 
     return imageTuples
 
 
-def generateVipCards(vipCards, assetsPath, outputImageFolderPath, sharedImages):
-    vipcardBackImagePathRaw = assetsPath / "VIPCardBack.png"
+def generateVipCards(vipCards, assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
+    vipcardBackImagePathRaw = assetGetter.getVipCardBackImageRaw()
     vipcardBackImagePath = imageDrawing.generateVIPCardBack(outputImageFolderPath, vipcardBackImagePathRaw)
     print(f"VIP card back produced")
 
-    path = assetsPath / "VIP Images"
-    images = Path(path).glob("*.png")
-    vipImagesPaths = [str(p) for p in images]
+    vipImagesPaths = assetGetter.getVipImagePaths()
 
     vipCardsProduced = 0
     for card in vipCards:
@@ -221,7 +275,7 @@ def generateVipCards(vipCards, assetsPath, outputImageFolderPath, sharedImages):
 
     return imageTuples
 
-def main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV):
+def main(outputFolderPath, assetGetter:AssetGetter, resourceCardsCSV, vipCardsCSV):
 
     outputImageFolderPath = outputFolderPath / "images"
     
@@ -232,12 +286,17 @@ def main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV):
 
     sharedImages = imageDrawing.SplendidSharedAssetts()
 
-    sharedImages.loadLevelIcon(assetsPath/ "level_icon.png")
+    # TODO the following asset Loading should probably be done in the Shared Asset Initializer
+    for resourceType in ResourceType.allButAvatar():
+        image = assetGetter.getResourceImagePath(resourceType)
+        sharedImages.loadResourceTypeImage(resourceType, image)
+
+    sharedImages.loadLevelIcon( assetGetter.getLevelIcon())
 
     pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
 
     # Generate Tokens Pdf
-    # tokenTuples = generateTokenCards(assetsPath, outputImageFolderPath, sharedImages)
+    # tokenTuples = generateTokenCards(assetGetter, outputImageFolderPath, sharedImages)
     # pdfManager.makePDF(tokenTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
 
     # Generate Resource Pdf
@@ -247,7 +306,7 @@ def main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV):
     if len(errors) > 0:
         print(f"{errors}")
     
-    imageTuples = generateResourceCards(resourceCards, assetsPath, outputImageFolderPath, sharedImages)
+    imageTuples = generateResourceCards(resourceCards, assetGetter, outputImageFolderPath, sharedImages)
     pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
 
     # Genereate VIP Pdf
@@ -257,17 +316,17 @@ def main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV):
     if len(errors) > 0:
         print(f"{errors}")
 
-    imageTuples = generateVipCards(vipCards, assetsPath, outputImageFolderPath, sharedImages)
+    imageTuples = generateVipCards(vipCards, assetGetter, outputImageFolderPath, sharedImages)
     pdfManager.makePDF(imageTuples, outputFolderPath/"VIPCards.pdf" ,imageDrawing.VIP_CARD_SIZE_IN)
 
 
 if __name__ == "__main__":
-    outputFolderPath = Path("/Users/gzingales/Downloads/SplendidOutput/v5")
+    outputFolderPath = Path("C:\\Users\\G\\code\\splendid\\output")
+
     assetsPath = Path("assets")
+    assetGetter = AssetGetter(assetsPath)
 
     resourceCardsCSV = assetsPath / "resourceCards.csv"
-    # resourceCardsCSV = assetsPath / "resourceCards_debug.csv"
-
     vipCardsCSV = assetsPath / "VIPCardsTriple.csv"
 
-    main(outputFolderPath, assetsPath, resourceCardsCSV, vipCardsCSV)
+    main(outputFolderPath, assetGetter, resourceCardsCSV, vipCardsCSV)
