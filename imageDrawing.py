@@ -1,3 +1,4 @@
+import logging
 from splendid import ResourceCard, ResourceType, VIPCard, ResourceToken
 
 from PIL import Image, ImageOps, ImageFont,  ImageDraw 
@@ -68,13 +69,11 @@ class SplendidSharedAssetts(object):
         self.levelIcon = img.resize(size=self.levelIconSize)
         
 # def getFont(fontname='arial.ttf', fontsize=50):
-def getFont(fontname=None, fontsize=50):
-    if fontname is None:
-        fontname = 'Herculanum.ttf'    
+def getFont(fontname='Herculanum.ttf', fontsize=50):
     try:
         return ImageFont.truetype(fontname, fontsize)
     except OSError:
-        print(f"could not find font {fontname}. Loading default instead")
+        logging.debug(f"could not find font {fontname}. Loading default instead")
         return ImageFont.load_default(size=fontsize)
 
     return 
