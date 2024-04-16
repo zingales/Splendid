@@ -7,7 +7,7 @@ import imageDrawing
 from PDFMaker import PdfSize, US_LETTER_IN
 
 
-from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken
+from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken, AssetGetter, SplendidSharedAssetts
 
 conversionColorToResourceType = {
     'Black': ResourceType.Air,
@@ -17,87 +17,6 @@ conversionColorToResourceType = {
     'Red':ResourceType.Fire,
     'Gold':ResourceType.Avatar
 }
-
-
-class AssetGetter(object):
-
-    def __init__(self, assetsPath:Path) -> None:
-        self.assetsPath = assetsPath
-        resourceTypeFolder = "Resource Type Images"
-        self.resourceTypeToImage = {
-            ResourceType.Air: assetsPath/ resourceTypeFolder / "Air.png",
-            ResourceType.Water:assetsPath/ resourceTypeFolder / "Water.png",
-            ResourceType.Earth:assetsPath/ resourceTypeFolder / "Earth.png",
-            ResourceType.Fire:assetsPath/ resourceTypeFolder / "Fire.png",
-            ResourceType.WhiteLotus:assetsPath/ resourceTypeFolder / "WhiteLotus.png",
-        }
-
-        resourceCardFolder = "Resource Cards Images"
-        self.resourceTypeToResourceCardFolder = {
-            ResourceType.Air: assetsPath/ resourceCardFolder / "Air Nomads",
-            ResourceType.Water:assetsPath/ resourceCardFolder / "Water Tribe",
-            ResourceType.Earth:assetsPath/ resourceCardFolder / "Earth Kingdom",
-            ResourceType.Fire:assetsPath/ resourceCardFolder / "Fire Nation",
-            ResourceType.WhiteLotus:assetsPath/ resourceCardFolder / "White Lotus",
-        }
-
-    def getAvatarImagesPath(self) -> Path:
-        path = self.assetsPath / "Avatar Coins"
-        return path.glob("*.png")
-    
-    def getResourceImagePath(self, resourceType: ResourceType) -> Path:
-        return self.resourceTypeToImage[resourceType]
-
-    def getLevelIcon(self):
-        return self.assetsPath / "level_icon.png"
-        
-
-    def getResourceCardBackPath(self):
-        return self.assetsPath/ "ResourceCardBack.png"
-    
-
-    def getResourceCardImagePaths(self, resourceType: ResourceType) -> list[Path]:
-        path = self.resourceTypeToResourceCardFolder[resourceType]
-        images = Path(path).glob("*.png")
-        return list(images)
-
-    def depre_loadAllResourceImagePaths(self):
-        ResourceCardFolderName = "Resource Cards Images"    
-        AirFolder = "Air Nomads"
-        EarthFolder = "Earth Kingdom"
-        FireFolder = "Fire Nation"
-        WaterFolder = "Water Tribe"
-        WhiteLotusFolder = "White Lotus"
-
-        folderNameToResourceType = {
-            AirFolder:ResourceType.Air,
-            EarthFolder:ResourceType.Earth,
-            FireFolder:ResourceType.Fire,
-            WaterFolder:ResourceType.Water,
-            WhiteLotusFolder:ResourceType.WhiteLotus
-        }
-
-        toReturn = defaultdict(list)
-
-        for folderName, resourceType in folderNameToResourceType.items():
-            path = self.assetsPath / ResourceCardFolderName / folderName
-            if path.is_dir():
-                images = Path(path).glob("*.png")
-                toReturn[resourceType] = list(images)
-            else:
-                logging.debug(f"path {path} doesn't exist")
-
-
-        return toReturn
-    
-    def getVipCardBackImageRaw(self):
-        return self.assetsPath / "VIPCardBack.png"
-    
-    def getVipImagePaths(self):
-        path = self.assetsPath / "VIP Images"
-        images = Path(path).glob("*.png")
-        return list(images)
-
 class BadCSVRow(ValueError):
     def __init__(self, csvRowNumber, rowContents, error):            
         super().__init__(f"Bad CSV Row. Row no.{csvRowNumber}, {error}: row contents {rowContents}")
@@ -158,14 +77,6 @@ def loadResourceCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exceptio
             rowCount+=1
 
         return cards, errors
-
-
-
-
-
-def guaranteeFolder(path:Path):
-    path.mkdir(parents=True, exist_ok=True)
-
 
 def generateTokenCards(assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
 
@@ -281,18 +192,9 @@ def main(outputFolderPath, assetGetter:AssetGetter, resourceCardsCSV, vipCardsCS
     outputImageFolderPath = outputFolderPath / "images"
     
 
-    guaranteeFolder(outputImageFolderPath)
+    imageDrawing.guaranteeFolder(outputImageFolderPath)
 
-    #Load resource type images
-
-    sharedImages = imageDrawing.SplendidSharedAssetts()
-
-    # TODO the following asset Loading should probably be done in the Shared Asset Initializer
-    for resourceType in ResourceType.allButAvatar():
-        image = assetGetter.getResourceImagePath(resourceType)
-        sharedImages.loadResourceTypeImage(resourceType, image)
-
-    sharedImages.loadLevelIcon( assetGetter.getLevelIcon())
+    sharedImages = SplendidSharedAssetts(assetGetter)
 
     pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
 

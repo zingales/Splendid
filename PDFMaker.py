@@ -1,12 +1,35 @@
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import pagesizes
 from pathlib import Path
+from typing import Tuple
 
-
+OUTPUT_DPI = 150
 POINTS_PER_IN = 72
 MARGIN_IN_PTS = 24
 
 US_LETTER_IN = (8.5, 11)
+
+class Card(object):
+
+    sizeInInches : Tuple[float, float]
+
+    def __init__(self) -> None:
+        pass
+        
+
+    def getFrontOfCardInches(self, size_in_inches: Tuple[float, float], output_path:Path) -> None:
+        self.getFrontOfCardPoints(self, [x*POINTS_PER_IN for x in size_in_inches], output_path)
+    
+    
+    def getBackOfCardInches(self, size_in_inches: Tuple[float, float], output_path:Path) -> None:
+        self.getBackOfCardPoints(self, [x*POINTS_PER_IN for x in size_in_inches], output_path)
+    
+    def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> None:
+        raise NotImplementedError("Must be implemented by the child class")
+    
+    def getBackOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> None:
+        raise NotImplementedError("Must be implemented by the child class")
+
 
 class PdfSize(object):
 
