@@ -17,6 +17,8 @@ BORDER_SIZE = 10
 
 TOKEN_DIAMETER_IN = 1.5
 
+# IMG_BORDER_CROP_SYMMETRICAL = 396
+IMG_BORDER_CROP_SYMMETRICAL = 400
 
 # Delicate colors background 
 # resourceTypeToPILColor = {
@@ -210,7 +212,8 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     card_size = RESOURCE_CARD_SIZE_IN
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = resourceTypeToPILColor[resourceCard.produces]
-    new_image = shrink_image(img, output_size, border_color)
+    new_image = symmetricalCrop(img, IMG_BORDER_CROP_SYMMETRICAL, 0)
+    new_image = shrink_image(new_image, output_size, border_color)
     cardImage = add_border(new_image, border_color)
     cardImage = add_border(cardImage, "black", 1)
 
@@ -243,7 +246,7 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
 
 
     # Add card level icon(s)
-    addCardLevel(cardImage, resourceCard.level, (bg_w//2,20), sharedImages.levelIcon)
+    # addCardLevel(cardImage, resourceCard.level, (bg_w//2,20), sharedImages.levelIcon)
 
 
     ### Everything requiring a draw object
@@ -267,6 +270,10 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     
     cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
+
+def symmetricalCrop(img, shrinkX, shrinkY):
+    img_size_x, img_size_y = img.size
+    return img.crop(box=(shrinkX,shrinkY,img_size_x-shrinkX,img_size_y-shrinkY))
 
 def add_border(img, border_color, border_size=BORDER_SIZE, cropInsteadOfShrink=True):
     x,y = img.size
