@@ -1,6 +1,4 @@
 import logging
-from splendid import ResourceCard, ResourceType, VIPCard, ResourceToken
-
 from PIL import Image, ImageOps, ImageFont,  ImageDraw 
 from pathlib import Path
 

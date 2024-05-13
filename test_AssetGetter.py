@@ -1,7 +1,7 @@
 import unittest
 from main import *
 
-class TestStringMethods(unittest.TestCase):
+class TestAssetGetter(unittest.TestCase):
     
     assetGetter = AssetGetter(Path("assets"))
 

@@ -3,9 +3,7 @@ from enum import Enum
 from typing import Dict, Tuple
 from imageDrawing import *
 
-from card import Card
-
-resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+from PDFMaker import Card
 
 class ResourceType(Enum):
     WhiteLotus=1
@@ -21,6 +19,8 @@ class ResourceType(Enum):
     @classmethod
     def allButAvatar(cls):
         return [ResourceType.Air, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.WhiteLotus]
+    
+resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
 
 class ResourceToken(object):
     resourceType:ResourceType
@@ -40,7 +40,7 @@ class VIPCard(Card):
 
     # VIP_CARD_SIZE_IN = (2.5, 2.5)
 
-    def __init__(self, requires:Dict[ResourceType,int], victoryPoints:int, sharedImages:SplendidSharedAssetts) -> None:
+    def __init__(self, requires:Dict[ResourceType,int], victoryPoints:int, sharedImages:'SplendidSharedAssetts') -> None:
         self.requires = requires
         self.victoryPoints = victoryPoints
         self.sharedAssets = sharedImages
@@ -131,12 +131,12 @@ class ResourceCard(Card):
     victoryPoints:int
     level:int
 
-    def __init__(self, produces:ResourceType, requires:Dict[ResourceType,int], level:int, victoryPoints:int, sharedImages:SplendidSharedAssetts) -> None:
+    def __init__(self, produces:ResourceType, requires:Dict[ResourceType,int], level:int, victoryPoints:int, sharedImages:'SplendidSharedAssetts') -> None:
         self.produces = produces
         self.requires = requires
         self.victoryPoints = victoryPoints
         self.level = level
-        self.sharedImages
+        self.sharedImages = sharedImages
 
 
     def __repr__(self) -> str:
