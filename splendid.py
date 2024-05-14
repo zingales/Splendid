@@ -18,9 +18,13 @@ class ResourceType(Enum):
     
     @classmethod
     def allButAvatar(cls):
-        return [ResourceType.Air, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.WhiteLotus]
+        return {ResourceType.Air, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.WhiteLotus}
     
-resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+    @classmethod
+    def resourceTypeOrder(cls):
+        return [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+    
+
 
 class ResourceToken(object):
     resourceType:ResourceType
@@ -98,7 +102,7 @@ class VIPCard(Card):
         
         xOffset = startingXOffset
         yOffset = (bg_h-BORDER_SIZE-reqH-5)
-        for resourceType in resourceTypeOrder:
+        for resourceType in ResourceType.resourceTypeOrder():
             if self.requires.get(resourceType, 0) == 0:
                 continue
 
@@ -119,7 +123,7 @@ class VIPCard(Card):
         font = getFont(fontsize=35)
         # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
         xOffset = startingXOffset+reqW
-        for resourceType in resourceTypeOrder:
+        for resourceType in ResourceType.resourceTypeOrder():
             resourceCount = self.requires.get(resourceType, 0)
             if resourceCount == 0:
                 continue
@@ -216,24 +220,40 @@ class ResourceCard(Card):
         cardImage.paste(producesImage, offset, mask=producesImage)
 
         # Add Requirements across the bottom. 
-        # Implicit order
-        # WhiteLotus, Water, Earth, Fire, Air
-        resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
-
         reqW,reqH = self.sharedImages.requiresSize
-        
-        interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
-        startingXOffset = BORDER_SIZE + interstitialSpaces//2
-        
         yOffset = (bg_h-BORDER_SIZE-reqH-5)
-        for index, resourceType in enumerate(resourceTypeOrder):
+
+        coordinates = imagesSpreadAcrossRange(startPoint=(BORDER_SIZE, yOffset), 
+                                          endPoint=(bg_w-BORDER_SIZE,yOffset), 
+                                          imageSize=self.sharedImages.requiresSize, 
+                                          numberOfImages=5)
+
+        typeOrder = ResourceType.resourceTypeOrder()
+        for i in range(5):
+            resourceType = typeOrder[i]
+
             if self.requires.get(resourceType, 0) == 0:
                 continue
 
-            x = (interstitialSpaces+reqW)*index+startingXOffset
-            y = yOffset
             toPaste = self.sharedImages.getRequiresImage(resourceType)
-            cardImage.paste(toPaste, (x,y),mask=toPaste)
+            cardImage.paste(toPaste, coordinates[i],mask=toPaste)
+
+
+
+        
+        
+        # interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
+        # startingXOffset = BORDER_SIZE + interstitialSpaces//2
+        
+        # yOffset = (bg_h-BORDER_SIZE-reqH-5)
+        # for index, resourceType in enumerate(ResourceType.resourceTypeOrder()):
+        #     if self.requires.get(resourceType, 0) == 0:
+        #         continue
+
+        #     x = (interstitialSpaces+reqW)*index+startingXOffset
+        #     y = yOffset
+        #     toPaste = self.sharedImages.getRequiresImage(resourceType)
+        #     cardImage.paste(toPaste, (x,y),mask=toPaste)
 
 
         # Add card level icon(s)
@@ -250,14 +270,22 @@ class ResourceCard(Card):
 
         font = getFont(fontsize=35)
         # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
-        for index, resourceType in enumerate(resourceTypeOrder):
+        for i in range(5):
+            resourceType = typeOrder[i]
             resourceCount = self.requires.get(resourceType, 0)
             if resourceCount == 0:
                 continue
 
-            x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
-            y = yOffset 
-            addNumber(draw, resourceCount, (x,y), font)
+            addNumber(draw, resourceCount, coordinates[i], font)
+
+        # for index, resourceType in enumerate(typeOrder):
+        #     resourceCount = self.requires.get(resourceType, 0)
+        #     if resourceCount == 0:
+        #         continue
+
+        #     x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
+        #     y = yOffset 
+            
         
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return cardImage

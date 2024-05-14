@@ -46,7 +46,34 @@ def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image, align
         for i in range(number):
             image.paste(icon, (centerX,startY+ (y*i)),mask=icon)
 
+def imagesSpreadAcrossRange(startPoint, endPoint, imageSize, numberOfImages):
 
+    def pairWiseAddition(t1, t2):
+        return tuple(i + j for i, j in zip(t1, t2))
+
+    def pairWiseSubtraction(t1, t2):
+        return tuple(i - j for i, j in zip(t1, t2))
+    
+    totalRange = pairWiseSubtraction(endPoint, startPoint)
+    
+    xIntersititalSpaces = (totalRange[0] - (numberOfImages*imageSize[0])) // numberOfImages
+
+    yIntersititalSpaces = (totalRange[1] - (numberOfImages*imageSize[1])) // numberOfImages
+
+
+    coordinates = list()
+
+    for i in range(numberOfImages):
+        xOffset = i*(xIntersititalSpaces+imageSize[0]) + (xIntersititalSpaces//2)
+        yOffset = i*(yIntersititalSpaces+imageSize[1]) + (yIntersititalSpaces//2)
+        if totalRange[0] == 0:
+            xOffset = 0
+        if totalRange[1] == 0:
+            yOffset = 0
+            
+        coordinates.append( pairWiseAddition(startPoint, (xOffset, yOffset)))
+
+    return coordinates
 
 def add_border(img, border_color, border_size=BORDER_SIZE, cropInsteadOfShrink=True):
     x,y = img.size
