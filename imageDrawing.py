@@ -29,6 +29,9 @@ def addNumber(draw:ImageDraw, number:int, centeredAt:tuple[int,int], font):
         raise ValueError("Center at postion is smaller than the width of the number")
     draw.text(loc,text,fill='white', font=font, stroke_width=2, stroke_fill='black')
 
+def symmetricalCrop(img, shrinkX, shrinkY):
+    img_size_x, img_size_y = img.size
+    return img.crop(box=(shrinkX,shrinkY,img_size_x-shrinkX,img_size_y-shrinkY))
 
 def addCardLevel(image, number:int, centeredAt:tuple[int,int], icon:Image, alignmentHorizontal=True):
     centerX, centerY = centeredAt

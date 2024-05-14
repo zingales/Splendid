@@ -136,6 +136,8 @@ class ResourceCard(Card):
     victoryPoints:int
     level:int
 
+    IMG_BORDER_CROP_SYMMETRICAL = 400
+
     def __init__(self, produces:ResourceType, requires:Dict[ResourceType,int], level:int, victoryPoints:int, sharedImages:'SplendidSharedAssetts') -> None:
         self.produces = produces
         self.requires = requires
@@ -200,6 +202,8 @@ class ResourceCard(Card):
         # create background image
         output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in size_in_pts)
         border_color = resourceTypeToPILColor[self.produces]
+        
+        new_image = symmetricalCrop(img, self.IMG_BORDER_CROP_SYMMETRICAL, 0)
         new_image = shrink_image(img, output_size, border_color)
         cardImage = add_border(new_image, border_color)
         cardImage = add_border(cardImage, "black", 1)
