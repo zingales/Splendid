@@ -200,7 +200,6 @@ class ResourceCard(Card):
         return backImg
     
     def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
-        # def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
         img = Image.open(self.backgroundFront)
 
         # create background image
@@ -219,18 +218,34 @@ class ResourceCard(Card):
         offset = ((bg_w - pImg_w)-BORDER_SIZE, BORDER_SIZE)
         cardImage.paste(producesImage, offset, mask=producesImage)
 
-        # Add Requirements across the bottom. 
+        # ========== Add Requirements ================
         reqW,reqH = self.sharedImages.requiresSize
-        yOffset = (bg_h-BORDER_SIZE-reqH-5)
-
-        coordinates = imagesSpreadAcrossRange(startPoint=(BORDER_SIZE, yOffset), 
-                                          endPoint=(bg_w-BORDER_SIZE,yOffset), 
-                                          imageSize=self.sharedImages.requiresSize, 
-                                          numberOfImages=5)
-
         typeOrder = ResourceType.resourceTypeOrder()
-        for i in range(5):
-            resourceType = typeOrder[i]
+
+        # Spread Images across Bottom
+        # orderedExisting = typeOrder
+        # yOffset = (bg_h-BORDER_SIZE-reqH-5)
+        # coordinates = imagesSpreadAcrossRange(startPoint=(BORDER_SIZE, yOffset), 
+        #                                   endPoint=(bg_w-BORDER_SIZE,yOffset), 
+        #                                   imageSize=self.sharedImages.requiresSize, 
+        #                                   numberOfImages=len(orderedExisting))
+        
+        # Spread images across side, but only if non zero
+        orderedExisting = list()
+        for resourceType in typeOrder:
+            if self.requires.get(resourceType, 0) != 0:
+                orderedExisting.append(resourceType)
+        
+        xOffset = (5+(reqW//2))
+
+        coordinates = imagesSpreadAcrossRange(startPoint=(xOffset, BORDER_SIZE), 
+                                          endPoint=(xOffset, bg_h-BORDER_SIZE), 
+                                          imageSize=self.sharedImages.requiresSize, 
+                                          numberOfImages=len(orderedExisting))
+
+        
+        for i in range(len(orderedExisting)):
+            resourceType = orderedExisting[i]
 
             if self.requires.get(resourceType, 0) == 0:
                 continue
@@ -239,25 +254,8 @@ class ResourceCard(Card):
             cardImage.paste(toPaste, coordinates[i],mask=toPaste)
 
 
-
-        
-        
-        # interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
-        # startingXOffset = BORDER_SIZE + interstitialSpaces//2
-        
-        # yOffset = (bg_h-BORDER_SIZE-reqH-5)
-        # for index, resourceType in enumerate(ResourceType.resourceTypeOrder()):
-        #     if self.requires.get(resourceType, 0) == 0:
-        #         continue
-
-        #     x = (interstitialSpaces+reqW)*index+startingXOffset
-        #     y = yOffset
-        #     toPaste = self.sharedImages.getRequiresImage(resourceType)
-        #     cardImage.paste(toPaste, (x,y),mask=toPaste)
-
-
         # Add card level icon(s)
-        addCardLevel(cardImage, self.level, (bg_w//2,20), self.sharedImages.getLevelIcon())
+        addCardLevel(cardImage, self.level, (55,bg_h-25), self.sharedImages.getLevelIcon())
 
 
         ### Everything requiring a draw object
@@ -266,26 +264,22 @@ class ResourceCard(Card):
         # Add Numbers to image
         font = getFont()
         if self.victoryPoints != 0:
-            addNumber(draw, self.victoryPoints, (25,25), font)
+            # top left
+            # addNumber(draw, self.victoryPoints, (25,25), font)
 
+            # top right
+            addNumber(draw, self.victoryPoints, (bg_w-25,bg_h-35), font)
+
+        # ========== Add Requirements (counts) ================
         font = getFont(fontsize=35)
         # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
-        for i in range(5):
-            resourceType = typeOrder[i]
+        for i in range(len(orderedExisting)):
+            resourceType = orderedExisting[i]
             resourceCount = self.requires.get(resourceType, 0)
             if resourceCount == 0:
                 continue
 
             addNumber(draw, resourceCount, coordinates[i], font)
-
-        # for index, resourceType in enumerate(typeOrder):
-        #     resourceCount = self.requires.get(resourceType, 0)
-        #     if resourceCount == 0:
-        #         continue
-
-        #     x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
-        #     y = yOffset 
-            
         
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return cardImage
