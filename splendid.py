@@ -204,7 +204,7 @@ class ResourceCard(Card):
         border_color = resourceTypeToPILColor[self.produces]
         
         new_image = symmetricalCrop(img, self.IMG_BORDER_CROP_SYMMETRICAL, 0)
-        new_image = shrink_image(img, output_size, border_color)
+        new_image = shrink_image(new_image, output_size, border_color)
         cardImage = add_border(new_image, border_color)
         cardImage = add_border(cardImage, "black", 1)
 
