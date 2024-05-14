@@ -7,7 +7,8 @@ import imageDrawing
 from PDFMaker import PdfSize, US_LETTER_IN
 
 
-from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken, AssetGetter, SplendidSharedAssetts
+import splendid
+from splendid import ResourceType, ResourceCard, VIPCard, ResourceToken, AssetGetter, SplendidSharedAssetts,ResourceCardCollection, VipResourceCardCollection
 
 conversionColorToResourceType = {
     'Black': ResourceType.Air,
@@ -26,7 +27,7 @@ class BadCSVRow(ValueError):
         self.rowContents = rowContents
 
 
-def loadVIPCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exception]]:
+def loadVIPCardsFromCsv(csvFile, sharedImages) -> tuple[list[ResourceCard], list[Exception]]:
     with open(csvFile, newline='\n') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', quotechar="'")
         cards = list()
@@ -42,7 +43,7 @@ def loadVIPCardsFromCsv(csvFile) -> tuple[list[ResourceCard], list[Exception]]:
                         continue
                     if row[ogColor] != '':
                         requirements[resourceType] = int(row[ogColor])
-                cards.append(VIPCard(requires=requirements, victoryPoints=victoryPoints))
+                cards.append(VIPCard(requires=requirements, victoryPoints=victoryPoints, sharedImages=sharedImages))
             except (KeyError,ValueError) as e:
                 customError = BadCSVRow(rowCount, f"{row}", e)
                 errors.append(customError)
@@ -116,51 +117,91 @@ def generateTokenCards(assetGetter:AssetGetter, outputImageFolderPath, sharedIma
     return imageTuples
 
 
-# def generateResourceCards(resourceCards, assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
-#     resourceCardBackPath = assetGetter.getResourceCardBackPath()
-#     resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
-#     logging.info(f"Resource Cards Backs Generated")
+
+def assignImagesToResourceCards(resourceCards:list[ResourceCard], assetGetter):
+
+    resourceCardBackPath = assetGetter.getResourceCardBackPath()
+    resourceTypeToImageList = dict()
+
+    for type in ResourceType.allButAvatar():
+        resourceTypeToImageList[type] = assetGetter.getResourceCardImagePaths(type)
+
+    for card in resourceCards:
+        if not card.hasBackgroundImageForFrontOfCard():
+            if len(resourceTypeToImageList[card.produces]) > 0:
+                card.setBackgroundImageForFrontOfCard(resourceTypeToImageList[card.produces].pop())
+            else:
+                raise Exception(f"not enough images of type {card.produces} to assign a different one to each Resource Card")
+        if not card.hasBackgroundImageForBackOfCard():
+            card.setBackgroundImageForBackOfCard(resourceCardBackPath)
     
-#     resourceTypeToImageList = dict()
+    return
 
-#     for type in ResourceType.allButAvatar():
-#         resourceTypeToImageList[type] = assetGetter.getResourceCardImagePaths(type)
 
-#     cardsOfTypeProduced = {
-#         ResourceType.Air: 0,
-#         ResourceType.Water:0, 
-#         ResourceType.Earth:0,
-#         ResourceType.Fire:0,
-#         ResourceType.WhiteLotus:0
-#     }
+
     
-#     producedCards = list()
-#     for card in resourceCards:
-#         try:
-#             if card.imagePath is None:
-#                 if len(resourceTypeToImageList[card.produces]) > 0:
-#                     card.imagePath = resourceTypeToImageList[card.produces].pop()
-#                 else:
-#                     continue
-#             outputPath = outputImageFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
-#             imageDrawing.processResourceCard(card, outputPath, sharedImages)
-#             card.renderedFrontImage = outputPath
-#             card.renderedBackImage = resourceCardBackPaths[card.level-1]
-
-#             cardsOfTypeProduced[card.produces]+=1
-#             producedCards.append(card)
-#         except IndexError as e:
-#             logging.error(e)
 
 
-#     logging.info(f"Resource Cards Generated")
-#     for resourceType, totalCount in cardsOfTypeProduced.items():
-#         logging.info(f"{resourceType.name}: {totalCount}")
 
-#     imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in producedCards]
+def generateResourceCards(resourceCards, assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
+    resourceCardBackPath = assetGetter.getResourceCardBackPath()
+    resourceCardBackPaths = imageDrawing.generateResourceCardBacks(outputImageFolderPath,resourceCardBackPath,sharedImages.levelIcon)
+    logging.info(f"Resource Cards Backs Generated")
+    
+    resourceTypeToImageList = dict()
 
-#     return imageTuples
+    for type in ResourceType.allButAvatar():
+        resourceTypeToImageList[type] = assetGetter.getResourceCardImagePaths(type)
 
+    cardsOfTypeProduced = {
+        ResourceType.Air: 0,
+        ResourceType.Water:0, 
+        ResourceType.Earth:0,
+        ResourceType.Fire:0,
+        ResourceType.WhiteLotus:0
+    }
+    
+    producedCards = list()
+    for card in resourceCards:
+        try:
+            if card.imagePath is None:
+                if len(resourceTypeToImageList[card.produces]) > 0:
+                    card.imagePath = resourceTypeToImageList[card.produces].pop()
+                else:
+                    continue
+            outputPath = outputImageFolderPath / f"{card.produces.name}_{cardsOfTypeProduced[card.produces]}.png"
+            imageDrawing.processResourceCard(card, outputPath, sharedImages)
+            card.renderedFrontImage = outputPath
+            card.renderedBackImage = resourceCardBackPaths[card.level-1]
+
+            cardsOfTypeProduced[card.produces]+=1
+            producedCards.append(card)
+        except IndexError as e:
+            logging.error(e)
+
+
+    logging.info(f"Resource Cards Generated")
+    for resourceType, totalCount in cardsOfTypeProduced.items():
+        logging.info(f"{resourceType.name}: {totalCount}")
+
+    imageTuples = [(card.renderedFrontImage, card.renderedBackImage) for card in producedCards]
+
+    return imageTuples
+
+def assignImagesToVIPCards(vipCards, assetGetter:AssetGetter):
+    vipCardBack = assetGetter.getVipCardBackImageRaw()
+
+    vipCardImages = assetGetter.getVipImagePaths()
+    for card in vipCards:
+        if not card.hasBackgroundImageForFrontOfCard():
+            if len(vipCardImages) > 0:
+                card.setBackgroundImageForFrontOfCard(vipCardImages.pop())
+            else:
+                raise Exception(f"not enough VIP images of type to assign a different one to each VIPCard")
+        if not card.hasBackgroundImageForBackOfCard():
+            card.setBackgroundImageForBackOfCard(vipCardBack)
+    
+    return
 
 def generateVipCards(vipCards, assetGetter:AssetGetter, outputImageFolderPath, sharedImages):
     vipcardBackImagePathRaw = assetGetter.getVipCardBackImageRaw()
@@ -198,10 +239,6 @@ def main(outputFolderPath, assetGetter:AssetGetter, resourceCardsCSV, vipCardsCS
 
     pdfManager = PdfSize(US_LETTER_IN[1], US_LETTER_IN[0])
 
-    # Generate Tokens Pdf
-    # tokenTuples = generateTokenCards(assetGetter, outputImageFolderPath, sharedImages)
-    # pdfManager.makePDF(tokenTuples, outputFolderPath/"Tokens.pdf" ,(imageDrawing.TOKEN_DIAMETER_IN, imageDrawing.TOKEN_DIAMETER_IN))
-
     # Generate Resource Pdf
     resourceCards, errors = loadResourceCardsFromCsv(resourceCardsCSV, sharedImages)
     logging.info(f"number of cards {len(resourceCards)}")
@@ -209,23 +246,27 @@ def main(outputFolderPath, assetGetter:AssetGetter, resourceCardsCSV, vipCardsCS
     if len(errors) > 0:
         logging.error(f"{errors}")
     
-    imageTuples = generateResourceCards(resourceCards, assetGetter, outputImageFolderPath, sharedImages)
-    pdfManager.makePDF(imageTuples, outputFolderPath/"ResourceCards.pdf" ,imageDrawing.RESOURCE_CARD_SIZE_IN)
+    # imageTuples = generateResourceCards(resourceCards, assetGetter, outputImageFolderPath, sharedImages)
+    assignImagesToResourceCards(resourceCards, assetGetter)
+    cardCollectionResourceCards = ResourceCardCollection(splendid.RESOURCE_CARD_SIZE_IN, resourceCards)
+    pdfManager.makePDFFromCardCollection(cardCollectionResourceCards, outputFolderPath / "ResourceCards.pdf", outputFolderPath / "images")
 
     # Genereate VIP Pdf
-    vipCards, errors = loadVIPCardsFromCsv(vipCardsCSV)    
+    vipCards, errors = loadVIPCardsFromCsv(vipCardsCSV, sharedImages)    
     logging.info(f"number of Vip cards {len(vipCards)}")
     logging.info(f"number of bad rows {len(errors)}")
     if len(errors) > 0:
         logging.error(f"{errors}")
 
-    imageTuples = generateVipCards(vipCards, assetGetter, outputImageFolderPath, sharedImages)
-    pdfManager.makePDF(imageTuples, outputFolderPath/"VIPCards.pdf" ,imageDrawing.VIP_CARD_SIZE_IN)
+    # imageTuples = generateVipCards(vipCards, assetGetter, outputImageFolderPath, sharedImages)
+    assignImagesToVIPCards(vipCards, assetGetter)
+    cardCollectionVip = VipResourceCardCollection(splendid.VIP_CARD_SIZE_IN, vipCards)
+    pdfManager.makePDFFromCardCollection(cardCollectionVip, outputFolderPath / "VIPCards.pdf", outputFolderPath / "images")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    outputFolderPath = Path("C:\\Users\\G\\code\\splendid\\output")
+    outputFolderPath = Path("output")
 
     assetsPath = Path("assets")
     assetGetter = AssetGetter(assetsPath)

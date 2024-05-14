@@ -2,6 +2,7 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import pagesizes
 from pathlib import Path
 from typing import Tuple
+from typing import Dict, Tuple, List
 
 OUTPUT_DPI = 150
 POINTS_PER_IN = 72
@@ -15,14 +16,17 @@ class Card(object):
 
     def __init__(self) -> None:
         pass
+
+    def __repr__(self) -> str:
+        return "A Card"
         
 
     def getFrontOfCardInches(self, size_in_inches: Tuple[float, float], output_path:Path) -> None:
-        self.getFrontOfCardPoints(self, [x*POINTS_PER_IN for x in size_in_inches], output_path)
+        return self.getFrontOfCardPoints(size_in_pts=(x*POINTS_PER_IN for x in size_in_inches), output_path=output_path)
     
     
     def getBackOfCardInches(self, size_in_inches: Tuple[float, float], output_path:Path) -> None:
-        self.getBackOfCardPoints(self, [x*POINTS_PER_IN for x in size_in_inches], output_path)
+        return self.getBackOfCardPoints([x*POINTS_PER_IN for x in size_in_inches], output_path)
     
     def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> None:
         raise NotImplementedError("Must be implemented by the child class")
@@ -30,6 +34,20 @@ class Card(object):
     def getBackOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> None:
         raise NotImplementedError("Must be implemented by the child class")
 
+
+class CardCollection(object):
+
+    cards : List[Card]
+    def __init__(self, cardSize, cards) -> None:
+        self.cards = list(cards)
+        self.cardSize = cardSize
+
+
+    def getAllImagesAsTuples(self, cardSizeInInches, imageOutputDirPath:Path):
+        raise NotImplementedError()
+    
+    def getCardSize(self):
+        return self.cardSize
 
 class PdfSize(object):
 
@@ -74,6 +92,12 @@ class PdfSize(object):
         
         return coordinates, backCoordinates
     
+
+    def makePDFFromCardCollection(self, cardCollection:CardCollection, outputPath:Path, tempPath):
+
+        tuples = cardCollection.getAllImagesAsTuples(cardCollection.cardSize, tempPath)
+        return self.makePDF(tuples, outputPath, cardCollection.getCardSize())
+
 
 
     def makePDF(self, frontAndBackImages:list[tuple[Path, Path]], outputPath:Path, imageSizeInInches:tuple[float, float]):

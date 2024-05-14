@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Dict, Tuple
 from imageDrawing import *
 
-from PDFMaker import Card
+from PDFMaker import Card, CardCollection, POINTS_PER_IN
 
 class ResourceType(Enum):
     WhiteLotus=1
@@ -38,12 +38,12 @@ class VIPCard(Card):
     backgroundFront: Path
     backgroundBack: Path
 
-    # VIP_CARD_SIZE_IN = (2.5, 2.5)
-
     def __init__(self, requires:Dict[ResourceType,int], victoryPoints:int, sharedImages:'SplendidSharedAssetts') -> None:
         self.requires = requires
         self.victoryPoints = victoryPoints
-        self.sharedAssets = sharedImages
+        self.sharedImages = sharedImages
+        self.backgroundFront = None
+        self.backgroundBack = None
         
 
     def __repr__(self) -> str:
@@ -54,6 +54,11 @@ class VIPCard(Card):
             resrouceStrings.append(f"{resource}: {count}")
         return f"Splendid.VIPCard(VP: {self.victoryPoints}, requires:[{', '.join(resrouceStrings)}], imagePath: {self.imagePath}"
     
+    def hasBackgroundImageForFrontOfCard(self):
+        return self.backgroundFront is not None
+    
+    def hasBackgroundImageForBackOfCard(self):
+        return self.backgroundBack is not None
 
     def setBackgroundImageForFrontOfCard(self, path:Path):
         self.backgroundFront = path
@@ -64,7 +69,7 @@ class VIPCard(Card):
     # cardImage = cardImage.transpose(Image.ROTATE_180)
     def getBackOfCardPoints(self,  size_in_pts: Tuple[int, int], output_path:Path) -> None:
         img = Image.open(self.backgroundBack)
-        output_size = tuple(x*OUTPUT_DPI for x in size_in_pts)
+        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in size_in_pts)
         border_color = "Black"
         cardImage = shrink_image(img, output_size, border_color)
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
@@ -74,7 +79,7 @@ class VIPCard(Card):
     def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
         img = Image.open(self.backgroundFront)
         card_size = size_in_pts
-        output_size = tuple(x*OUTPUT_DPI for x in card_size)
+        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in card_size)
         border_color = "Black"
         new_image = shrink_image(img, output_size, "White")
         cardImage = add_border(new_image, border_color, border_size=1)
@@ -137,6 +142,9 @@ class ResourceCard(Card):
         self.victoryPoints = victoryPoints
         self.level = level
         self.sharedImages = sharedImages
+        self.backgroundFront = None
+        self.backgroundBack = None
+        self.cardBackPerLevel = dict()
 
 
     def __repr__(self) -> str:
@@ -146,15 +154,25 @@ class ResourceCard(Card):
                 continue
             resrouceStrings.append(f"{resource}: {count}")
         return f"Splendid.ResourceCard(level: {self.level}, produces: {self.produces}, VP: {self.victoryPoints}, requires:[{', '.join(resrouceStrings)}], imagePath: {self.imagePath}"
+    
+    def __str__(self) -> str:
+        return self.__repr__()
         
+    def hasBackgroundImageForFrontOfCard(self):
+        return self.backgroundFront is not None
+    
+    def hasBackgroundImageForBackOfCard(self):
+        return self.backgroundBack is not None
+
     def setBackgroundImageForFrontOfCard(self, path:Path):
         self.backgroundFront = path
 
     def setBackgroundImageForBackOfCard(self, path:Path):
         self.backgroundBack = path
 
-    def getBackOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> None:
-        output_size = tuple(x*OUTPUT_DPI for x in RESOURCE_CARD_SIZE_IN)
+
+    def getBackOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> Image:
+        output_size = tuple(x//POINTS_PER_IN *OUTPUT_DPI for x in size_in_pts)
 
         border_color = "white"
         cardImage = Image.open(self.backgroundBack)
@@ -163,26 +181,133 @@ class ResourceCard(Card):
 
         bg_w, bg_h = cardImage.size
 
-        generatedBackPaths = list()
-        iconImg = self.sharedAssets().getLevelIcon()
+        generatedBackPaths = dict()
+        iconImg = self.sharedImages.getLevelIcon()
+        i = self.level
 
-        for i in range(1,4):
-            backImg = cardImage.copy()
-            addCardLevel(backImg, i, (20,bg_h//2), iconImg, alignmentHorizontal=False)
-            addCardLevel(backImg, i, (bg_w-20-iconImg.size[0],bg_h//2), iconImg, alignmentHorizontal=False)
-            backImg = backImg.transpose(Image.ROTATE_180)
-            # output_path = outputFolder / f"ResourceCard_Back_{i}.png"
-            generatedBackPaths.append(output_path)
-            backImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+        backImg = cardImage.copy()
+        addCardLevel(backImg, i, (20,bg_h//2), iconImg, alignmentHorizontal=False)
+        addCardLevel(backImg, i, (bg_w-20-iconImg.size[0],bg_h//2), iconImg, alignmentHorizontal=False)
+        backImg = backImg.transpose(Image.ROTATE_180)
+        generatedBackPaths[i] = output_path
+        backImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+        return backImg
+    
+    def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
+        # def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
+        img = Image.open(self.backgroundFront)
 
-        return generatedBackPaths
+        # create background image
+        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in size_in_pts)
+        border_color = resourceTypeToPILColor[self.produces]
+        new_image = shrink_image(img, output_size, border_color)
+        cardImage = add_border(new_image, border_color)
+        cardImage = add_border(cardImage, "black", 1)
+
+        # Add produces in the corner
+        producesImage = self.sharedImages.getProducesImage(self.produces)
+        pImg_w, pImg_h = producesImage.size
+        bg_w, bg_h = cardImage.size
+        offset = ((bg_w - pImg_w)-BORDER_SIZE, BORDER_SIZE)
+        cardImage.paste(producesImage, offset, mask=producesImage)
+
+        # Add Requirements across the bottom. 
+        # Implicit order
+        # WhiteLotus, Water, Earth, Fire, Air
+        resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+
+        reqW,reqH = self.sharedImages.requiresSize
         
+        interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
+        startingXOffset = BORDER_SIZE + interstitialSpaces//2
+        
+        yOffset = (bg_h-BORDER_SIZE-reqH-5)
+        for index, resourceType in enumerate(resourceTypeOrder):
+            if self.requires.get(resourceType, 0) == 0:
+                continue
+
+            x = (interstitialSpaces+reqW)*index+startingXOffset
+            y = yOffset
+            toPaste = self.sharedImages.getRequiresImage(resourceType)
+            cardImage.paste(toPaste, (x,y),mask=toPaste)
+
+
+        # Add card level icon(s)
+        addCardLevel(cardImage, self.level, (bg_w//2,20), self.sharedImages.getLevelIcon())
+
+
+        ### Everything requiring a draw object
+        draw = ImageDraw.Draw(cardImage)
+
+        # Add Numbers to image
+        font = getFont()
+        if self.victoryPoints != 0:
+            addNumber(draw, self.victoryPoints, (25,25), font)
+
+        font = getFont(fontsize=35)
+        # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
+        for index, resourceType in enumerate(resourceTypeOrder):
+            resourceCount = self.requires.get(resourceType, 0)
+            if resourceCount == 0:
+                continue
+
+            x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
+            y = yOffset 
+            addNumber(draw, resourceCount, (x,y), font)
+        
+        cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+        return cardImage
+        
+
+
+class ResourceCardCollection(CardCollection):
+
+    # Handles caching as the back of cards are more or less the same. 
+    def getAllImagesAsTuples(self, cardSizeInInches, imageOutputPath:Path):
+        imageCache = dict()
+        cardTuples = list()
+        count = 0
+        for card in self.cards:
+            assert isinstance(card, ResourceCard)
+            frontPath = imageOutputPath / f"ResourceCard_{count:2}_{card.produces}.png"
+            front = card.getFrontOfCardInches(cardSizeInInches, frontPath)
+            backPath = imageOutputPath / f"ResourceCardBack_{card.level}.png"
+            if card.level not in imageCache:
+                imageCache[card.level] = card.getBackOfCardInches(cardSizeInInches, backPath)
+            cardTuples.append((frontPath,backPath))
+            count += 1
+            
+        return cardTuples
+
+
+class VipResourceCardCollection(CardCollection):
+
+    def getAllImagesAsTuples(self, cardSizeInInches, imageOutputPath:Path):
+        backPath = None
+        cardTuples = list()
+        count = 0
+        for card in self.cards:
+            assert isinstance(card, VIPCard)
+            frontPath = imageOutputPath / f"VIP_Card_{count:2}.png"
+            card.getFrontOfCardInches(cardSizeInInches, frontPath)
+            if backPath is None:
+                backPath = imageOutputPath / f"VIP_CardBack.png"
+                card.getBackOfCardInches(cardSizeInInches, backPath)
+            cardTuples.append((frontPath,backPath))
+            count += 1
+            
+        return cardTuples
+
+
+
+
 
 PLAYING_CARD_SIZE_IN = (2.5, 3.7)
 
 
 
 RESOURCE_CARD_SIZE_IN = (4, 2.25)
+VIP_CARD_SIZE_IN = (2.5, 2.5)
 
 OUTPUT_DPI = 150
 
@@ -272,14 +397,15 @@ class SplendidSharedAssetts(object):
     requiresImages: Dict[ResourceType, Image.Image]
 
     def __init__(self, assetGetter:AssetGetter) -> None:
-        self.resouceTypeToImage = dict()
         self.assetGetter = assetGetter
+        self.producesImages = dict()
+        self.requiresImages = dict()
+        self.levelImage = None
 
     def _loadResourceTypeImage(self, resourceType:ResourceType):
         img = Image.open(self.assetGetter.getResourceImagePath(resourceType))
         image_produces = img.resize(size=self.producesSize)
         image_requires = img.resize(size=self.requiresSize)
-        self.resouceTypeToImage[resourceType]
         self.producesImages[resourceType] = image_produces
         self.requiresImages[resourceType] = image_requires
 
@@ -297,6 +423,7 @@ class SplendidSharedAssetts(object):
         if self.levelImage is None:
             img = Image.open(self.assetGetter.getLevelIcon())
             self.levelImage =  img.resize(size=self.levelIconSize)
+        return self.levelImage
 
 def processToken(token:ResourceToken, output_path:Path):
     img = Image.open(token.imagePath)
@@ -304,10 +431,6 @@ def processToken(token:ResourceToken, output_path:Path):
     tokenImg = img.resize(size=(pixels,pixels))
     tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
 
-
-
-
-    
 
 def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
     img = Image.open(resourceCard.imagePath)
