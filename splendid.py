@@ -73,7 +73,7 @@ class VIPCard(Card):
     # cardImage = cardImage.transpose(Image.ROTATE_180)
     def getBackOfCardPoints(self,  size_in_pts: Tuple[int, int], output_path:Path) -> None:
         img = Image.open(self.backgroundBack)
-        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in size_in_pts)
+        output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in size_in_pts)
         border_color = "Black"
         cardImage = shrink_image(img, output_size, border_color)
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
@@ -83,7 +83,7 @@ class VIPCard(Card):
     def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
         img = Image.open(self.backgroundFront)
         card_size = size_in_pts
-        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in card_size)
+        output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in card_size)
         border_color = "Black"
         new_image = shrink_image(img, output_size, "White")
         cardImage = add_border(new_image, border_color, border_size=1)
@@ -178,12 +178,12 @@ class ResourceCard(Card):
 
 
     def getBackOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path) -> Image:
-        output_size = tuple(x//POINTS_PER_IN *OUTPUT_DPI for x in size_in_pts)
+        output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in size_in_pts)
 
         border_color = "white"
         cardImage = Image.open(self.backgroundBack)
         cardImage = shrink_image(cardImage, output_size, border_color)
-        cardImage = add_border(cardImage, "black", 1)
+        # cardImage = add_border(cardImage, "black", 1)
 
         bg_w, bg_h = cardImage.size
 
@@ -203,13 +203,13 @@ class ResourceCard(Card):
         img = Image.open(self.backgroundFront)
 
         # create background image
-        output_size = tuple(x//POINTS_PER_IN*OUTPUT_DPI for x in size_in_pts)
+        output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in size_in_pts)
         border_color = resourceTypeToPILColor[self.produces]
         
         new_image = symmetricalCrop(img, self.IMG_BORDER_CROP_SYMMETRICAL, 0)
         new_image = shrink_image(new_image, output_size, border_color)
         cardImage = add_border(new_image, border_color)
-        cardImage = add_border(cardImage, "black", 1)
+        # cardImage = add_border(cardImage, "black", 1)
 
         # Add produces in the corner
         producesImage = self.sharedImages.getProducesImage(self.produces)
@@ -236,7 +236,7 @@ class ResourceCard(Card):
             if self.requires.get(resourceType, 0) != 0:
                 orderedExisting.append(resourceType)
         
-        xOffset = (5+(reqW//2))
+        xOffset = ((reqW//3))
 
         coordinates = imagesSpreadAcrossRange(startPoint=(xOffset, BORDER_SIZE), 
                                           endPoint=(xOffset, bg_h-BORDER_SIZE), 
@@ -255,7 +255,7 @@ class ResourceCard(Card):
 
 
         # Add card level icon(s)
-        addCardLevel(cardImage, self.level, (55,bg_h-25), self.sharedImages.getLevelIcon())
+        addCardLevel(cardImage, self.level, (40,bg_h-25), self.sharedImages.getLevelIcon())
 
 
         ### Everything requiring a draw object
@@ -296,10 +296,11 @@ class ResourceCardCollection(CardCollection):
         for card in self.cards:
             assert isinstance(card, ResourceCard)
             frontPath = imageOutputPath / f"ResourceCard_{count:2}_{card.produces}.png"
-            front = card.getFrontOfCardInches(cardSizeInInches, frontPath)
+            card.getFrontOfCardInches(cardSizeInInches, frontPath)
             backPath = imageOutputPath / f"ResourceCardBack_{card.level}.png"
             if card.level not in imageCache:
-                imageCache[card.level] = card.getBackOfCardInches(cardSizeInInches, backPath)
+                card.getBackOfCardInches(cardSizeInInches, backPath)
+                imageCache[card.level] = backPath
             cardTuples.append((frontPath,backPath))
             count += 1
             

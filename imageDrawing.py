@@ -87,10 +87,10 @@ def add_border(img, border_color, border_size=BORDER_SIZE, cropInsteadOfShrink=T
 def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
     desired_x, desired_y = new_size_pixels
 
-    img_size_y, img_size_x = img.size
+    img_size_x, img_size_y  = img.size
     
-    ratioed_x = (img_size_y/img_size_x) * desired_y
-    ratioed_y = (img_size_x/img_size_y) * desired_x
+    ratioed_x = (img_size_x/img_size_y) * desired_y
+    ratioed_y = (img_size_y/img_size_x) * desired_x
 
     x = desired_x
     y = desired_y
