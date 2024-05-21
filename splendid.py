@@ -2,6 +2,7 @@ from pathlib import Path
 from enum import Enum
 from typing import Dict, Tuple
 from imageDrawing import *
+import math
 
 from PDFMaker import Card, CardCollection, POINTS_PER_IN
 
@@ -75,7 +76,7 @@ class VIPCard(Card):
         img = Image.open(self.backgroundBack)
         output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in size_in_pts)
         border_color = "Black"
-        cardImage = shrink_image(img, output_size, border_color)
+        cardImage, xBorder, yBorder = shrink_image(img, output_size, border_color)
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return output_path
     
@@ -84,9 +85,8 @@ class VIPCard(Card):
         img = Image.open(self.backgroundFront)
         card_size = size_in_pts
         output_size = tuple(int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in card_size)
-        border_color = "Black"
-        new_image = shrink_image(img, output_size, "White")
-        cardImage = add_border(new_image, border_color, border_size=1)
+        cardImage, xBorder, yBorder = shrink_image(img, output_size, "White")
+        # cardImage = add_border(cardImage, border_color, border_size=1)
 
 
         bg_w, bg_h = cardImage.size
@@ -182,7 +182,7 @@ class ResourceCard(Card):
 
         border_color = "white"
         cardImage = Image.open(self.backgroundBack)
-        cardImage = shrink_image(cardImage, output_size, border_color)
+        cardImage, xBorder, yBorder = shrink_image(cardImage, output_size, border_color)
         # cardImage = add_border(cardImage, "black", 1)
 
         bg_w, bg_h = cardImage.size
@@ -207,7 +207,10 @@ class ResourceCard(Card):
         border_color = resourceTypeToPILColor[self.produces]
         
         new_image = symmetricalCrop(img, self.IMG_BORDER_CROP_SYMMETRICAL, 0)
-        new_image = shrink_image(new_image, output_size, border_color)
+        new_image, xBorder, yBorder = shrink_image(new_image, output_size, border_color)
+        addAlphaLayer(new_image, softEdgeWidth=20, xOffset=xBorder, yOffset=yBorder)
+
+
         cardImage = add_border(new_image, border_color)
         # cardImage = add_border(cardImage, "black", 1)
 
@@ -284,6 +287,69 @@ class ResourceCard(Card):
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return cardImage
         
+def addAlphaLayer(image:Image,  softEdgeWidth=50, xOffset=0, yOffset=0):
+    image_width, image_height = image.size
+    
+
+    alpha = Image.new('L', image.size, 255)
+    data = alpha.load()
+
+
+
+    def xFade(x,y) -> int:
+        if x < xOffset:
+            return 255
+        if x > image_width-xOffset:
+            return 255
+        if y < yOffset:
+            return 255
+        if y > image_height - yOffset:
+            return 255
+        
+
+        if x < softEdgeWidth+xOffset:
+            xi = x-xOffset
+        elif x > image_width-softEdgeWidth-xOffset:
+            xi = image_width-xOffset-x
+        else:
+            return 255
+        
+
+        return (xi/softEdgeWidth)*255
+        
+    def yFade(x,y) -> int:
+        if x < xOffset:
+            return 255
+        if x > image_width-xOffset:
+            return 255
+        if y < yOffset:
+            return 255
+        if y > image_height - yOffset:
+            return 255
+        
+        if y < softEdgeWidth+yOffset:
+            yi = y - yOffset
+        elif y > image_height-softEdgeWidth-yOffset:
+            yi = image_height-yOffset - y
+        else:
+            return 255
+        
+        return (yi/softEdgeWidth)*255
+
+    for x in range(0, image_width):
+        for y in range(image_height):
+            newVal = 255
+            newVal = min(newVal, xFade(x,y))
+            newVal = min(newVal, yFade(x,y))
+            # newVal = max(newVal, roundedCorners(x,y))
+
+            if newVal != 255:
+                data[x,y] = int(min(data[x,y], newVal))
+
+
+    image.putalpha(alpha)
+    return image
+
 
 
 class ResourceCardCollection(CardCollection):
@@ -352,12 +418,22 @@ TOKEN_DIAMETER_IN = 1.5
 #     ResourceType.Avatar: "Black"
 # }
 
-resourceTypeToPILColor = {
+resourceTypeToPILColorOld = {
     ResourceType.Air: (245,202,107), 
     ResourceType.Earth: (155,201,102), 
     ResourceType.Fire: (228,141,113), 
     ResourceType.Water: (96,156,230), 
     ResourceType.WhiteLotus: "White",
+    # I don't think the below is ever needed. Just including it for completness
+    ResourceType.Avatar: "Black"
+}
+
+resourceTypeToPILColor = {
+    ResourceType.Air: ( 220, 144, 0), 
+    ResourceType.Earth: (24, 84, 36), 
+    ResourceType.Fire: (96, 20, 20), 
+    ResourceType.Water: (28, 64, 110), 
+    ResourceType.WhiteLotus: (248,229,187),
     # I don't think the below is ever needed. Just including it for completness
     ResourceType.Avatar: "Black"
 }
@@ -466,7 +542,7 @@ def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImage
     card_size = RESOURCE_CARD_SIZE_IN
     output_size = tuple(x*OUTPUT_DPI for x in card_size)
     border_color = resourceTypeToPILColor[resourceCard.produces]
-    new_image = shrink_image(img, output_size, border_color)
+    new_image, xBorder, yBorder = shrink_image(img, output_size, border_color)
     cardImage = add_border(new_image, border_color)
     cardImage = add_border(cardImage, "black", 1)
 

@@ -1,5 +1,5 @@
 import logging
-from PIL import Image, ImageOps, ImageFont,  ImageDraw 
+from PIL import Image, ImageOps, ImageFont,  ImageDraw, ImageFilter
 from pathlib import Path
 
 BORDER_SIZE = 10
@@ -82,7 +82,10 @@ def add_border(img, border_color, border_size=BORDER_SIZE, cropInsteadOfShrink=T
         smaller_image = img.crop(box=(border_size,border_size,x-border_size,y-border_size))
     else:
         smaller_image = img.resize(size=(int(x-(2*border_size)),int(y-(2*border_size))))
-    return ImageOps.expand(smaller_image,  border_size, fill = border_color)
+    
+    monotoneColor = Image.new("RGB", img.size, border_color)
+    monotoneColor.paste(smaller_image,(border_size, border_size),mask=smaller_image)
+    return monotoneColor
 
 def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
     desired_x, desired_y = new_size_pixels
@@ -107,10 +110,11 @@ def shrink_image(img:Image, new_size_pixels:tuple[int, int], fill):
     
     new_image = img.resize(size=(int(x),int(y)))
 
+    x_border = 0
+    y_border = 0
     if fill_required:
         x_border = int((desired_x-x)/2)
         y_border = int((desired_y-y)/2)
         new_image = ImageOps.expand(new_image, border=(x_border,y_border), fill=fill)
     
-    return new_image
-
+    return new_image, x_border, y_border
