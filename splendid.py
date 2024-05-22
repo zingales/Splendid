@@ -2,7 +2,6 @@ from pathlib import Path
 from enum import Enum
 from typing import Dict, Tuple
 from imageDrawing import *
-import math
 
 from PDFMaker import Card, CardCollection, POINTS_PER_IN
 
@@ -102,7 +101,7 @@ class VIPCard(Card):
         
         xOffset = startingXOffset
         yOffset = (bg_h-BORDER_SIZE-reqH-5)
-        for resourceType in ResourceType.resourceTypeOrder():
+        for resourceType in resourceTypeOrder:
             if self.requires.get(resourceType, 0) == 0:
                 continue
 
@@ -199,6 +198,7 @@ class ResourceCard(Card):
         backImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return backImg
     
+
     def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
         img = Image.open(self.backgroundFront)
 
@@ -221,7 +221,11 @@ class ResourceCard(Card):
         offset = ((bg_w - pImg_w)-BORDER_SIZE, BORDER_SIZE)
         cardImage.paste(producesImage, offset, mask=producesImage)
 
-        # ========== Add Requirements ================
+        # Add Requirements across the bottom. 
+        # Implicit order
+        # WhiteLotus, Water, Earth, Fire, Air
+        resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
+
         reqW,reqH = self.sharedImages.requiresSize
         typeOrder = ResourceType.resourceTypeOrder()
 
