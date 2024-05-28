@@ -78,15 +78,14 @@ class PdfSize(object):
         new_box_width = tile_width + width_padding
         new_box_height = tile_height + height_padding
 
-
         coordinates = list()
         backCoordinates = list()
         for h in range(height_count):
             for w in range(width_count):
-                height_pixels = int ((self.min_height + (height_padding/2) + (h * new_box_height)))
-                width_pixels = int( (self.min_width + (width_padding/2) + (w * new_box_width)) )
+                height_pixels = int ((self.min_height + (height_padding/2) + (h * new_box_height)) )
+                width_pixels = int( (self.min_width + (width_padding/2) + (w * new_box_width)))
                 coordinates.append((width_pixels, height_pixels))
-                backCoordinates.append((width_pixels, int(self.height-height_pixels-tile_height)))
+                backCoordinates.append((width_pixels, int(self.max_height-height_pixels-tile_height)))
             
 
         
@@ -95,7 +94,7 @@ class PdfSize(object):
 
     def makePDFFromCardCollection(self, cardCollection:CardCollection, outputPath:Path, tempPath):
 
-        tuples = cardCollection.getAllImagesAsTuples(cardCollection.cardSize, tempPath)
+        tuples = cardCollection.getAllImagesAsTuples(cardCollection.getCardSize(), tempPath)
         return self.makePDF(tuples, outputPath, cardCollection.getCardSize())
 
 
@@ -124,7 +123,8 @@ class PdfSize(object):
             for i,image in nextPage:
                 x,y = backCoordinates[i]
                 myfile.drawImage(str(image), x,y, width=imageWidth,height=imageHeight, mask='auto')
-            myfile.showPage()
+            if len(nextPage)> 0:
+                myfile.showPage()
 
         myfile.save()
 

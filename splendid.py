@@ -26,15 +26,62 @@ class ResourceType(Enum):
     
 
 
-class ResourceToken(object):
-    resourceType:ResourceType
-    imagePath: Path
-    renderedFrontImage:Path 
+PLAYING_CARD_SIZE_IN = (2.5, 3.7)
+RESOURCE_CARD_SIZE_IN = (4, 2.25)
+VIP_CARD_SIZE_IN = (2.5, 2.5)
+OUTPUT_DPI = 150
+TOKEN_DIAMETER_IN = (1.5, 1.5)
 
-    def __init__(self, resourceType:ResourceType, imagePath=None) -> None:
+
+# Delicate colors background 
+# resourceTypeToPILColor = {
+#     ResourceType.Air: (249,239,210), 
+#     ResourceType.Earth: (225,252,223), 
+#     ResourceType.Fire: (251,233,221), 
+#     ResourceType.Water: (215,234,247), 
+#     ResourceType.WhiteLotus: "White",
+#     # I don't think the below is ever needed tbh. Just including it for completness
+#     ResourceType.Avatar: "Black"
+# }
+
+resourceTypeToPILColorOld = {
+    ResourceType.Air: (245,202,107), 
+    ResourceType.Earth: (155,201,102), 
+    ResourceType.Fire: (228,141,113), 
+    ResourceType.Water: (96,156,230), 
+    ResourceType.WhiteLotus: "White",
+    # I don't think the below is ever needed. Just including it for completness
+    ResourceType.Avatar: "Black"
+}
+
+resourceTypeToPILColor = {
+    ResourceType.Air: ( 220, 144, 0), 
+    ResourceType.Earth: (24, 84, 36), 
+    ResourceType.Fire: (96, 20, 20), 
+    ResourceType.Water: (28, 64, 110), 
+    ResourceType.WhiteLotus: (248,229,187),
+    # I don't think the below is ever needed. Just including it for completness
+    ResourceType.Avatar: "Black"
+}
+    
+
+class ResourceToken(Card):
+
+    def __init__(self, resourceType, imagePath:Path, sharedImages:'SplendidSharedAssetts') -> None:
+        self.sharedImages = sharedImages
         self.resourceType = resourceType
         self.imagePath = imagePath
-        self.renderedFrontImage = None
+
+    def getFrontOfCardPoints(self, size_in_pts: Tuple[int, int], output_path:Path):
+        img = Image.open(self.imagePath)
+        size = (int((x/POINTS_PER_IN)*OUTPUT_DPI) for x in size_in_pts)
+        tokenImg = img.resize(size=size)
+        tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
+        return output_path
+    
+
+    def getBackOfCardPoints(self,  size_in_pts: Tuple[int, int], output_path:Path) -> None:
+        return None
 
 class VIPCard(Card):
     requires:Dict[ResourceType,int]
@@ -101,7 +148,7 @@ class VIPCard(Card):
         
         xOffset = startingXOffset
         yOffset = (bg_h-BORDER_SIZE-reqH-5)
-        for resourceType in resourceTypeOrder:
+        for resourceType in ResourceType.resourceTypeOrder():
             if self.requires.get(resourceType, 0) == 0:
                 continue
 
@@ -150,6 +197,7 @@ class ResourceCard(Card):
         self.backgroundFront = None
         self.backgroundBack = None
         self.cardBackPerLevel = dict()
+        self.alphaLayers = dict()
 
 
     def __repr__(self) -> str:
@@ -208,7 +256,12 @@ class ResourceCard(Card):
         
         new_image = symmetricalCrop(img, self.IMG_BORDER_CROP_SYMMETRICAL, 0)
         new_image, xBorder, yBorder = shrink_image(new_image, output_size, border_color)
-        addAlphaLayer(new_image, softEdgeWidth=20, xOffset=xBorder, yOffset=yBorder)
+        if new_image.size not in self.alphaLayers:
+            self.alphaLayers[new_image.size] = getAlphaLayer(new_image.size, softEdgeWidth=20, xOffset=xBorder, yOffset=yBorder)
+        
+        alpha = self.alphaLayers.get(new_image.size)
+
+        new_image.putalpha(alpha)
 
 
         cardImage = add_border(new_image, border_color)
@@ -291,11 +344,11 @@ class ResourceCard(Card):
         cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
         return cardImage
         
-def addAlphaLayer(image:Image,  softEdgeWidth=50, xOffset=0, yOffset=0):
-    image_width, image_height = image.size
+def getAlphaLayer(image_size,  softEdgeWidth=50, xOffset=0, yOffset=0):
+    image_width, image_height = image_size
     
 
-    alpha = Image.new('L', image.size, 255)
+    alpha = Image.new('L', image_size, 255)
     data = alpha.load()
 
 
@@ -351,8 +404,7 @@ def addAlphaLayer(image:Image,  softEdgeWidth=50, xOffset=0, yOffset=0):
                 data[x,y] = int(min(data[x,y], newVal))
 
 
-    image.putalpha(alpha)
-    return image
+    return alpha
 
 
 
@@ -396,51 +448,32 @@ class VipResourceCardCollection(CardCollection):
         return cardTuples
 
 
+class ResourceTokenCardCollection(CardCollection):
+
+
+    def getAllImagesAsTuples(self, cardSizeInInches, imageOutputPath:Path):
+        cardTuples = list()
+        imageCache = dict()
+        count = 0
+        for card in self.cards:
+            assert isinstance(card, ResourceToken)
+            if card.resourceType == ResourceType.Avatar:
+                frontPath = imageOutputPath / f"Token_{card.resourceType}_{count:2}.png"
+                frontImage = card.getFrontOfCardInches(cardSizeInInches, frontPath)
+                count+=1
+            elif card.resourceType not in imageCache:
+                frontPath = imageOutputPath / f"Token_{card.resourceType}.png"
+                frontImage = card.getFrontOfCardInches(cardSizeInInches, frontPath)
+            else:
+                continue
+            
+            cardTuples.append((frontImage, None))
+            
+            
+        return cardTuples
 
 
 
-PLAYING_CARD_SIZE_IN = (2.5, 3.7)
-
-
-
-RESOURCE_CARD_SIZE_IN = (4, 2.25)
-VIP_CARD_SIZE_IN = (2.5, 2.5)
-
-OUTPUT_DPI = 150
-
-TOKEN_DIAMETER_IN = 1.5
-
-
-# Delicate colors background 
-# resourceTypeToPILColor = {
-#     ResourceType.Air: (249,239,210), 
-#     ResourceType.Earth: (225,252,223), 
-#     ResourceType.Fire: (251,233,221), 
-#     ResourceType.Water: (215,234,247), 
-#     ResourceType.WhiteLotus: "White",
-#     # I don't think the below is ever needed tbh. Just including it for completness
-#     ResourceType.Avatar: "Black"
-# }
-
-resourceTypeToPILColorOld = {
-    ResourceType.Air: (245,202,107), 
-    ResourceType.Earth: (155,201,102), 
-    ResourceType.Fire: (228,141,113), 
-    ResourceType.Water: (96,156,230), 
-    ResourceType.WhiteLotus: "White",
-    # I don't think the below is ever needed. Just including it for completness
-    ResourceType.Avatar: "Black"
-}
-
-resourceTypeToPILColor = {
-    ResourceType.Air: ( 220, 144, 0), 
-    ResourceType.Earth: (24, 84, 36), 
-    ResourceType.Fire: (96, 20, 20), 
-    ResourceType.Water: (28, 64, 110), 
-    ResourceType.WhiteLotus: (248,229,187),
-    # I don't think the below is ever needed. Just including it for completness
-    ResourceType.Avatar: "Black"
-}
 
 
 
@@ -531,74 +564,3 @@ class SplendidSharedAssetts(object):
             img = Image.open(self.assetGetter.getLevelIcon())
             self.levelImage =  img.resize(size=self.levelIconSize)
         return self.levelImage
-
-def processToken(token:ResourceToken, output_path:Path):
-    img = Image.open(token.imagePath)
-    pixels = int(TOKEN_DIAMETER_IN*OUTPUT_DPI)
-    tokenImg = img.resize(size=(pixels,pixels))
-    tokenImg.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
-
-
-def processResourceCard(resourceCard:ResourceCard, output_path:Path, sharedImages:SplendidSharedAssetts):
-    img = Image.open(resourceCard.imagePath)
-
-    # create background image
-    card_size = RESOURCE_CARD_SIZE_IN
-    output_size = tuple(x*OUTPUT_DPI for x in card_size)
-    border_color = resourceTypeToPILColor[resourceCard.produces]
-    new_image, xBorder, yBorder = shrink_image(img, output_size, border_color)
-    cardImage = add_border(new_image, border_color)
-    cardImage = add_border(cardImage, "black", 1)
-
-    # Add produces in the corner
-    producesImage = sharedImages.getProducesImage(resourceCard.produces)
-    pImg_w, pImg_h = producesImage.size
-    bg_w, bg_h = cardImage.size
-    offset = ((bg_w - pImg_w)-BORDER_SIZE, BORDER_SIZE)
-    cardImage.paste(producesImage, offset, mask=producesImage)
-
-    # Add Requirements across the bottom. 
-    # Implicit order
-    # WhiteLotus, Water, Earth, Fire, Air
-    resourceTypeOrder = [ResourceType.WhiteLotus, ResourceType.Water, ResourceType.Earth, ResourceType.Fire, ResourceType.Air]
-
-    reqW,reqH = sharedImages.requiresSize
-    
-    interstitialSpaces = ((bg_w - 2*BORDER_SIZE) - (5*reqW)) // 5
-    startingXOffset = BORDER_SIZE + interstitialSpaces//2
-    
-    yOffset = (bg_h-BORDER_SIZE-reqH-5)
-    for index, resourceType in enumerate(resourceTypeOrder):
-        if resourceCard.requires.get(resourceType, 0) == 0:
-            continue
-
-        x = (interstitialSpaces+reqW)*index+startingXOffset
-        y = yOffset
-        toPaste = sharedImages.getRequiresImage(resourceType)
-        cardImage.paste(toPaste, (x,y),mask=toPaste)
-
-
-    # Add card level icon(s)
-    addCardLevel(cardImage, resourceCard.level, (bg_w//2,20), sharedImages.levelIcon)
-
-
-    ### Everything requiring a draw object
-    draw = ImageDraw.Draw(cardImage)
-
-    # Add Numbers to image
-    font = getFont()
-    if resourceCard.victoryPoints != 0:
-        addNumber(draw, resourceCard.victoryPoints, (25,25), font)
-
-    font = getFont(fontsize=35)
-    # I'm doing here a second time instead of inline with the adding of resource, because I don't know if i can do that. 
-    for index, resourceType in enumerate(resourceTypeOrder):
-        resourceCount = resourceCard.requires.get(resourceType, 0)
-        if resourceCount == 0:
-            continue
-
-        x = (interstitialSpaces+reqW)*index+startingXOffset+reqW
-        y = yOffset 
-        addNumber(draw, resourceCount, (x,y), font)
-    
-    cardImage.save(output_path, dpi=(OUTPUT_DPI,OUTPUT_DPI))
